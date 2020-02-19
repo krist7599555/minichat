@@ -1,45 +1,11 @@
 {
   "name": "minichat",
-  "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
-  },
-  "dependencies": {
-    "@fortawesome/fontawesome-svg-core": "^1.2.27",
-    "@fortawesome/free-brands-svg-icons": "^5.12.1",
-    "@fortawesome/free-regular-svg-icons": "^5.12.1",
-    "@fortawesome/free-solid-svg-icons": "^5.12.1",
-    "@fortawesome/vue-fontawesome": "^0.1.9",
-    "@vue/composition-api": "^0.3.4",
-    "axios": "^0.19.2",
-    "buefy": "^0.8.10",
-    "core-js": "^3.6.4",
-    "lodash": "^4.17.15",
-    "register-service-worker": "^1.6.2",
-    "rxjs": "^6.5.4",
-    "vue": "^2.6.11",
-    "vue-router": "^3.1.5"
-  },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^2.18.0",
-    "@typescript-eslint/parser": "^2.18.0",
-    "@vue/cli-plugin-babel": "^4.2.0",
-    "@vue/cli-plugin-eslint": "^4.2.0",
-    "@vue/cli-plugin-pwa": "^4.2.0",
-    "@vue/cli-plugin-router": "^4.2.0",
-    "@vue/cli-plugin-typescript": "^4.2.0",
-    "@vue/cli-service": "^4.2.0",
-    "@vue/eslint-config-typescript": "^5.0.1",
-    "eslint": "^6.7.2",
-    "eslint-plugin-vue": "^6.1.2",
-    "pug": "^2.0.4",
-    "pug-plain-loader": "^1.0.0",
-    "sass": "^1.25.0",
-    "sass-loader": "^8.0.2",
-    "typescript": "~3.7.5",
-    "vue-template-compiler": "^2.6.11"
+    "lerna": "^3.19.0"
+  },
+  "scripts": {
+    "dev:front": "yarn --cwd ./packages/vue dev",
+    "dev:back": "yarn --cwd ./packages/nest dev"
   }
 }

@@ -1,24 +1,13 @@
-# minichat
+# 💬 minichat - socket
 
-## Project setup
-```
-yarn install
-```
+![](screenshot/1.png)
 
-### Compiles and hot-reloads for development
-```
-yarn serve
-```
+## frontend
 
-### Compiles and minifies for production
-```
-yarn build
-```
+- vue
+- rxjs
 
-### Lints and fixes files
-```
-yarn lint
-```
+## backend
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+- nest
+- socket
