@@ -8,13 +8,13 @@ import {
 } from '@nestjs/common';
 
 import { AppService } from './app.service';
-import { creategroup } from './rethinkdb';
+import { createGroup } from './rethinkdb';
 import {
-  getusers,
-  getgroups,
-  getmessages,
-  unreadmessage,
-  createuser,
+  getUsers,
+  getGroups,
+  getMessages,
+  getUserUnreadsMessage,
+  createUser,
 } from './rethinkdb';
 
 @Controller('/api')
@@ -22,21 +22,21 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  getHello(): string {
+  getAPI(): string {
     return 'NO API IMPLEMENT';
   }
   @Get('users')
   findUsers() {
-    return getusers();
+    return getUsers();
   }
   @Get('users/:id/unreads')
   getUnread(@Param('id') userid: string) {
-    return unreadmessage(userid);
+    return getUserUnreadsMessage(userid);
   }
   @Post('users')
   createUser(@Body() body) {
     if (body.id) {
-      return createuser(body);
+      return createUser(body);
     } else {
       throw new BadRequestException('need id to create user');
     }
@@ -44,12 +44,12 @@ export class AppController {
 
   @Get('groups')
   findGroups() {
-    return getgroups();
+    return getGroups();
   }
   @Get('groups')
   createGroups(@Body() body) {
     if (body.title) {
-      return creategroup(body);
+      return createGroup(body);
     } else {
       throw new BadRequestException('need title to create group');
     }
@@ -57,6 +57,6 @@ export class AppController {
 
   @Get('messages')
   findMessages() {
-    return getmessages();
+    return getMessages();
   }
 }
