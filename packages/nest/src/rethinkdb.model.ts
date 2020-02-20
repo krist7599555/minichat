@@ -1,6 +1,5 @@
-import { IsString, IsNotEmpty } from 'class-validator';
-
 import * as _ from 'lodash';
+import { RDatum } from 'rethinkdb-ts';
 
 export type Unreads = Record<string, Date>;
 export interface User {
@@ -15,7 +14,7 @@ export interface Message {
   userid: string;
   roomid: string;
   text: string;
-  time: Date;
+  time: Date | RDatum<Date>;
 }
 
 function combine(...fs: Function[]) {

@@ -1,97 +1,124 @@
-import { r, Connection } from 'rethinkdb-ts';
+import { BadRequestException } from '@nestjs/common';
+import { noop } from 'lodash';
+import { Connection, r } from 'rethinkdb-ts';
+import { Group, Message, User } from './rethinkdb.model';
 
-import { assign, noop } from 'lodash';
+// init value
 
-import { validate } from 'class-validator';
-
-import { User, Group, Message } from './rethinkdb.model';
-
-const DB = 'minichat';
+export const RETHINKDB_NAME = 'minichat';
 
 export var conn: Connection = null;
-export const connp = r.connect({ db: DB }).then(c => (conn = c));
+export const ready = r.connect({ db: RETHINKDB_NAME }).then(c => (conn = c));
 
 export const users = r.table<User>('users');
 export const groups = r.table<Group>('groups');
 export const messages = r.table<Message>('messages');
-// export const joins = r.table<Join>('joins');
 
-async function main() {
-  await connp;
+// init state
+
+export async function reset(db: string) {
   await r
-    .dbCreate(DB)
+    .dbCreate(db)
     .run(conn)
     .catch(noop);
-  await Promise.all(
-    ['users', 'groups', 'messages'].map(c =>
-      r
-        .tableCreate(c)
-        .run(conn)
-        .catch(noop),
-    ),
-  );
-  // await users
-  //   .insert(
-  //     {
-  //       id: 'krist7599555',
-  //       unreads: {
-  //         'room-1': r.now(),
-  //         'room-2': r.now(),
-  //         'room-3': r.now(),
-  //       },
-  //     },
-  //     { conflict: 'update' },
-  //   )
-  //   .run(conn);
-
-  // await messages
-  //   .insert([
-  //     { roomid: 'room-1', text: 'txx1', time: r.now() },
-  //     { roomid: 'room-1', text: 'txx2', time: r.now() },
-  //     { roomid: 'room-1', text: 'txx3', time: r.now() },
-  //     { roomid: 'room-3', text: 'txx4', time: r.now() },
-  //     { roomid: 'room-3', text: 'txx5', time: r.now() },
-  //   ])
-  //   .run(conn);
-  // console.log(await users.run(conn));
-  // console.log('finish');
+  conn.use(db);
+  for (const c of ['users', 'groups', 'messages']) {
+    await r
+      .tableCreate(c)
+      .run(conn)
+      .catch(noop);
+  }
+  await users.delete().run(conn);
+  await groups.delete().run(conn);
+  await messages.delete().run(conn);
 }
-export const ready = main();
 
-export function getusers() {
+// methods
+
+export function getUsers() {
   return users.run(conn);
 }
-export function getmessages() {
+export function getMessages() {
   return messages.run(conn);
 }
-export function getgroups() {
+export function getGroups() {
   return groups.run(conn);
 }
 
-export function createuser(id: string) {
-  return users.insert({ id }).run(conn);
+export function getGroup(roomid: string) {
+  return groups.get(roomid).run(conn);
 }
-export function creategroup(title: string) {
-  return groups.insert({ title }).run(conn);
+export function getUser(userid: string) {
+  return users.get(userid).run(conn);
 }
-export function send(userid: string, roomid: string, text: string) {
-  return messages.insert({ userid, roomid, text, time: r.now() }).run(conn);
+
+export function createUser(id: string) {
+  return users.insert({ id, unreads: {} }, { conflict: 'error' }).run(conn);
 }
-export function allmessages(roomid: string) {
-  return messages.filter({ roomid }).run(conn);
-}
-export function read(userid: string, roomid: string) {
-  return users
-    .get(userid)
-    .update({
-      unreads: {
-        [roomid]: r.now(),
-      },
-    })
+export function createGroup(title: string, id?: string) {
+  return groups
+    .insert(id ? { id, title } : { title }, { conflict: 'error' })
     .run(conn);
 }
 
-export function unreadmessage(userid: string) {
+export function isJoined(userid: string, roomid: string) {
+  return users
+    .get(userid)('unreads')
+    .hasFields(roomid)
+    .run(conn);
+}
+
+export async function joinGroup(userid: string, roomid: string) {
+  if ((await getGroup(roomid)) && !(await isJoined(userid, roomid))) {
+    return users
+      .get(userid)
+      .update({
+        unreads: {
+          [roomid]: r.epochTime(0),
+        },
+      })
+      .run(conn);
+  } else {
+    throw new BadRequestException(`cat't join, userid or roomid not exist`);
+  }
+}
+
+export async function sendMessage(
+  userid: string,
+  roomid: string,
+  text: string,
+) {
+  if (await isJoined(userid, roomid)) {
+    return messages.insert({ userid, roomid, text, time: r.now() }).run(conn);
+  } else {
+    throw new BadRequestException(`userid not join room ${roomid} yet`);
+  }
+}
+export function getGroupsMessages(roomid: string) {
+  return messages.filter({ roomid }).run(conn);
+}
+
+export async function read(userid: string, roomid: string) {
+  if (await isJoined(userid, roomid)) {
+    return users
+      .get(userid)
+      .update({
+        unreads: {
+          [roomid]: r.now(),
+        },
+      })
+      .run(conn);
+  } else {
+    throw new BadRequestException(`may be not join ${roomid} room yet`);
+  }
+}
+
+export function getUserUnreads(userid: string) {
+  return users
+    .get(userid)('unreads')
+    .run(conn);
+}
+export function getUserUnreadsMessage(userid: string) {
   return users
     .get(userid)('unreads')
     .coerceTo('array')
@@ -103,5 +130,22 @@ export function unreadmessage(userid: string) {
         .filter(msg =>
           r.and(msg('roomid').eq(unred(0)), msg('time').gt(unred(1))),
         ),
-    }));
+    }))
+    .run(conn);
+}
+export async function getUserUnreadsMessageGroup(
+  userid: string,
+  roomid: string,
+) {
+  const latest = await users
+    .get(userid)('unreads')(roomid)
+    .run(conn);
+  return {
+    roomid: roomid,
+    latest: latest,
+    messages: await messages
+      .coerceTo('array')
+      .filter(msg => r.and(msg('roomid').eq(roomid), msg('time').gt(latest)))
+      .run(conn),
+  };
 }
