@@ -1,20 +1,19 @@
 import {
+  BadRequestException,
+  Body,
   Controller,
   Get,
   Param,
   Post,
-  Body,
-  BadRequestException,
 } from '@nestjs/common';
-
 import { AppService } from './app.service';
-import { createGroup } from './rethinkdb';
 import {
-  getUsers,
+  createGroup,
+  createUser,
   getGroups,
   getMessages,
+  getUsers,
   getUserUnreadsMessage,
-  createUser,
 } from './rethinkdb';
 
 @Controller('/api')

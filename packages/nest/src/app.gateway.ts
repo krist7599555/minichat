@@ -1,29 +1,25 @@
+import { Logger } from '@nestjs/common';
 import {
-  SubscribeMessage,
-  WebSocketGateway,
-  OnGatewayInit,
-  WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
-
-import { Socket, Server } from 'socket.io';
-
 import * as _ from 'lodash';
-
+import { Server, Socket } from 'socket.io';
+import { v4 as uuid } from 'uuid';
 import {
-  ONLINE_USERS,
-  SEND_MESSAGE,
-  RECEIVE_MESSAGE,
+  JoinRoomDto,
   JOIN_ROOM,
   LEFT_ROOM,
+  ONLINE_USERS,
+  RECEIVE_MESSAGE,
   RECEIVE_MESSAGES,
-  JoinRoomDto,
   SendMessageDto,
+  SEND_MESSAGE,
 } from './app.gateway.model';
-
-import { v4 as uuid } from 'uuid';
 
 @WebSocketGateway({
   path: '/socket.io',
