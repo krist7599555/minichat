@@ -2,7 +2,7 @@ import Vue from 'vue';
 
 import VueRouter from 'vue-router';
 
-import { user$ } from '../store/auth';
+import { userid$ } from '../store/auth';
 import Home from '../views/Home.vue';
 import Groups from '../views/Groups.vue';
 
@@ -25,7 +25,7 @@ const router = new VueRouter({
   routes
 });
 router.beforeEach((to, from, next) => {
-  const auth = user$.value;
+  const auth = userid$.getValue();
   if (auth && to.name == 'login') {
     next('/');
   } else if (!auth && to.name != 'login') {

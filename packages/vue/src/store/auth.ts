@@ -2,36 +2,27 @@ import { BehaviorSubject } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 import router from '../router';
+import * as socket from './socket';
+import * as IO from './socket.model';
+import * as _ from 'lodash';
 
 const AUTH_TOKEN = 'token';
 
-export interface Auth {
-  sub: string;
-}
+export const userid$ = new BehaviorSubject<string | null>(sessionStorage.getItem(AUTH_TOKEN));
 
-export const user$ = new BehaviorSubject<Auth | null>(null);
-export const userid$ = user$.pipe(map(u => (u ? u.sub : null)));
+userid$.subscribe((userid: string | null) => {
+  socket.emit(IO.AUTH, { userid }, () => {
+    console.log('auth acknowledge');
+  });
+});
 
-export function userid() {
-  return user$.value ? user$.value.sub : null;
-}
-export function login(username: string) {
-  const obj: Auth = { sub: username };
-  user$.next(obj);
-  sessionStorage.setItem(AUTH_TOKEN, JSON.stringify(obj));
+export function login(userid: string) {
+  userid$.next(userid);
+  sessionStorage.setItem(AUTH_TOKEN, userid);
   router.go(0);
 }
 export function logout() {
-  user$.next(null);
+  userid$.next(null);
   sessionStorage.removeItem(AUTH_TOKEN);
   router.go(0);
 }
-
-function init() {
-  const u = sessionStorage.getItem(AUTH_TOKEN);
-  if (u) {
-    user$.next(JSON.parse(u));
-  }
-}
-
-init();

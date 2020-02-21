@@ -1,61 +1,31 @@
-import { BehaviorSubject } from 'rxjs';
-import { SendMessageDto } from '../../../nest/dist/app.gateway.model';
-import {
-  JOIN_ROOM,
-  BROADCAST_MESSAGE,
-  SEND_MESSAGE,
-  RECEIVE_MESSAGES
-} from '../../../nest/src/app.gateway.model';
-import { userid } from './auth';
-import { emit, on } from './socket';
-import { ROOMS } from '../../../nest/src/app.gateway.model';
-
-export interface Group {
-  id: string;
-  image: string;
-  title: string;
-  member: number;
-}
-export interface Message {
-  text: string;
-  userid: string;
-  id: string;
-  roomid: string;
-}
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import * as socket from './socket';
+import * as IO from './socket.model';
+import { userid$ } from './auth';
 
 export const roomid$ = new BehaviorSubject<string | null>(null);
-
-export const rooms$ = new BehaviorSubject<Group[]>([
-  { id: '694c258f2', image: 'coffee', title: 'Best Coffee Group', member: 13 },
-  { id: '9a3b6c9bb', image: 'fish', title: 'Chula Eng CP44', member: 96 },
-  { id: '33075ecff', image: 'home', title: '2110101 comprog', member: 333 },
-  { id: '06c12ed2c', image: 'sun', title: 'HORA today', member: 2 }
-]);
-
-export const messages$ = new BehaviorSubject<Message[]>([]);
-
-on(BROADCAST_MESSAGE, (msg: Message) => {
-  messages$.next([...messages$.value, msg]);
+export const rooms$ = new Observable(observer => {
+  socket.on(IO.ROOMS, rooms => observer.next(rooms));
 });
-on(RECEIVE_MESSAGES, (msgs: Message[]) => {
-  messages$.next(msgs);
-});
-on(ROOMS, groups => {
-  rooms$.next(groups);
-});
+export const message_emiter$ = new Subject();
+export const messages$ = new BehaviorSubject<IO.MessageIO[]>([]);
 
-export async function changeroom(roomid: string) {
-  roomid$.next(roomid);
-  emit(JOIN_ROOM, { roomid });
+export async function change_room(roomid: string) {
+  if (roomid != roomid$.getValue()) {
+    roomid$.next(null);
+    socket.emit(IO.READ_MESSAGE, { roomid, userid: userid$.getValue() }, msgs => {
+      console.log('TCL: functionread_message -> msgs', msgs);
+      roomid$.next(roomid);
+      messages$.next(null);
+      messages$.next(msgs);
+    });
+  }
 }
 
-export function send(text: string) {
-  const u = userid();
-  if (roomid$.value && u) {
-    emit(SEND_MESSAGE, {
-      text,
-      roomid: roomid$.value,
-      userid: u
-    } as SendMessageDto);
-  }
+export function send_message(text: string) {
+  socket.emit(IO.SEND_MESSAGE, {
+    roomid: roomid$.getValue(),
+    userid: userid$.getValue(),
+    text
+  });
 }

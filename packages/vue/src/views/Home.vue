@@ -13,7 +13,7 @@ div
 <script>
 import { computed, watch } from '@vue/composition-api';
 import { noop } from 'lodash';
-import { changeroom } from '../store/chat';
+import { change_room } from '../store/chat';
 
 export default {
   name: 'Home',
@@ -24,7 +24,7 @@ export default {
   },
   watch: {
     ['$route.params.id']() {
-      changeroom(this.$route.params.id);
+      change_room(this.$route.params.id);
     }
   }
 };

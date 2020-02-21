@@ -1,24 +1,22 @@
+// * SOCKET CONSTANT
 export const JOIN_ROOM = 'join_room';
 export const LEFT_ROOM = 'left_room';
 export const SEND_MESSAGE = 'send_message';
-export const RECEIVE_MESSAGE = 'send_message';
-export const RECEIVE_MESSAGES = 'send_messages';
+export const READ_MESSAGE = 'read_message';
+export const ON_MESSAGE = 'on_message';
+export const ROOMS = 'watch_rooms';
+export const AUTH = 'auth_user';
 
-export interface JoinRoomDto {
+export interface RoomIO {
+  userid: string;
   roomid: string;
 }
-export interface LeftRoomDto {
-  roomid: string;
-}
-// prettier-ignore
-export interface SendMessageDto {
+export interface MessageIO {
   roomid: string;
   userid: string;
-  text:   string;
+  text: string;
+  time?: Date;
 }
-// prettier-ignore
-export interface ReceiveMessageDto {
-  roomid: string;
-  userid: string;
-  text:   string;
+export interface AuthIO {
+  userid: string | null;
 }
