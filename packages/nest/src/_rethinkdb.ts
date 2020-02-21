@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { noop } from 'lodash';
 import { Connection, r } from 'rethinkdb-ts';
-import { Group, Message, User } from './rethinkdb.model';
+import { Group, Message, User } from './_rethinkdb.model';
 
 // init value
 
@@ -31,6 +31,21 @@ export async function reset(db: string) {
   await users.delete().run(conn);
   await groups.delete().run(conn);
   await messages.delete().run(conn);
+}
+
+export async function listenGroups(cb: Function) {
+  await ready;
+  const cursor = await groups.changes().run(conn);
+  cursor.each((err, res) => {
+    cb(res.new_val);
+  });
+}
+export async function listenMessages(cb: Function) {
+  await ready;
+  const cursor = await messages.changes().run(conn);
+  cursor.each((err, res) => {
+    cb(res.new_val);
+  });
 }
 
 // methods
@@ -149,3 +164,5 @@ export async function getUserUnreadsMessageGroup(
       .run(conn),
   };
 }
+
+// HOOK

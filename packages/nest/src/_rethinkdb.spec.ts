@@ -1,6 +1,6 @@
 import * as _ from 'lodash';
 import * as rethink from './rethinkdb';
-import { DUMP_GROUPS, DUMP_USERS } from './rethinkdb.spec.constant';
+import { DUMP_GROUPS, DUMP_USERS } from './_rethinkdb.spec.constant';
 
 const USER_1 = 'user-1';
 const USER_2 = 'user-2';

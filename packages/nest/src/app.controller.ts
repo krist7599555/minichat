@@ -7,14 +7,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { AppService } from './app.service';
-import {
-  createGroup,
-  createUser,
-  getGroups,
-  getMessages,
-  getUsers,
-  getUserUnreadsMessage,
-} from './rethinkdb';
+// import * as rethink from './rethinkdb';
 
 @Controller('/api')
 export class AppController {
@@ -26,16 +19,23 @@ export class AppController {
   }
   @Get('users')
   findUsers() {
-    return getUsers();
+    // return rethink.getUsers();
   }
-  @Get('users/:id/unreads')
-  getUnread(@Param('id') userid: string) {
-    return getUserUnreadsMessage(userid);
+  @Get('users/:userid/unreads')
+  getUnread(@Param('userid') userid: string) {
+    // return rethink.getUserUnreadsMessage(userid);
+  }
+  @Get('users/:userid/unreads/:roomid')
+  getUnreadGroup(
+    @Param('userid') userid: string,
+    @Param('roomid') roomid: string,
+  ) {
+    // return rethink.getUserUnreadsMessageGroup(userid, roomid);
   }
   @Post('users')
   createUser(@Body() body) {
     if (body.id) {
-      return createUser(body);
+      // return rethink.createUser(body);
     } else {
       throw new BadRequestException('need id to create user');
     }
@@ -43,12 +43,13 @@ export class AppController {
 
   @Get('groups')
   findGroups() {
-    return getGroups();
+    // return rethink.getGroups();
   }
-  @Get('groups')
+
+  @Post('groups')
   createGroups(@Body() body) {
     if (body.title) {
-      return createGroup(body);
+      // return rethink.createGroup(body.title);
     } else {
       throw new BadRequestException('need title to create group');
     }
@@ -56,6 +57,10 @@ export class AppController {
 
   @Get('messages')
   findMessages() {
-    return getMessages();
+    // return rethink.getMessages();
+  }
+  @Get('messages/:roomid')
+  findGroupsMessages(@Param('roomid') roomid) {
+    // return rethink.getGroupsMessages(roomid);
   }
 }

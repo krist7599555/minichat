@@ -5,11 +5,14 @@ import { AppController } from './app.controller';
 import { AppGateway } from './app.gateway';
 import { AppService } from './app.service';
 
+import { RethinkdbModule } from './rethinkdb/rethinkdb.module';
+
 @Module({
   imports: [
     ServeStaticModule.forRoot({
       rootPath: path.join(__dirname, '../static'),
     }),
+    RethinkdbModule,
   ],
   controllers: [AppController],
   providers: [AppService, AppGateway],

@@ -4,12 +4,13 @@ import VueRouter from 'vue-router';
 
 import { user$ } from '../store/auth';
 import Home from '../views/Home.vue';
+import Groups from '../views/Groups.vue';
 
 Vue.use(VueRouter);
 
 const routes = [
   { path: '/', name: 'home', component: Home },
-  { path: '/chat', name: 'chat', component: Home },
+  { path: '/chat', name: 'chat', component: Groups },
   { path: '/chat/:id', name: 'room', component: Home },
   {
     path: '/login',

@@ -1,5 +1,5 @@
 import { r } from 'rethinkdb-ts';
-import { Group, Message, User } from './rethinkdb.model';
+import { Group, Message, User } from './_rethinkdb.model';
 
 export const DUMP_USERS: User[] = [
   { id: 'user-1', unreads: {} },

@@ -1,4 +1,3 @@
-import { Logger } from '@nestjs/common';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -9,67 +8,88 @@ import {
 } from '@nestjs/websockets';
 import * as _ from 'lodash';
 import { Server, Socket } from 'socket.io';
-import { v4 as uuid } from 'uuid';
 import {
-  JoinRoomDto,
   JOIN_ROOM,
   LEFT_ROOM,
-  ONLINE_USERS,
-  RECEIVE_MESSAGE,
-  RECEIVE_MESSAGES,
-  SendMessageDto,
+  ROOMS,
   SEND_MESSAGE,
+  RoomIO,
+  MessageIO,
+  AUTH,
+  AuthIO,
 } from './app.gateway.model';
+// import * as rethink from './rethinkdb';
+import { RethinkdbService, rooms } from './rethinkdb/rethinkdb.service';
 
 @WebSocketGateway({
   path: '/socket.io',
 })
 export class AppGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  private readonly auth: Record<string, string> = {};
+  constructor(private readonly rethink: RethinkdbService) {}
+
   @WebSocketServer() server: Server;
 
-  private clients = new Set<string>();
-  private messages: (SendMessageDto & { id: string })[] = [];
-  private logger: Logger = new Logger('Socket');
-
-  getMessages(roomid: string) {
-    return _.filter(this.messages, { roomid });
-  }
-
   @SubscribeMessage(JOIN_ROOM)
-  join_room(client: Socket, payload: JoinRoomDto) {
-    if (_.isString(payload.roomid)) {
-      client.join(payload.roomid);
-      client.emit(RECEIVE_MESSAGES, this.getMessages(payload.roomid));
-      this.logger.log(client.id + ' join ' + payload.roomid, 'Socket Join');
-    }
+  async join_room(client: Socket, payload: RoomIO) {
+    return this.rethink
+      .user(payload.userid)
+      .room(payload.roomid)
+      .do_join_room()
+      .then(() => {
+        client.join(payload.roomid);
+      });
   }
 
   @SubscribeMessage(LEFT_ROOM)
-  left_room(client: Socket, payload: JoinRoomDto) {
-    if (_.isString(payload.roomid)) {
-      client.leave(payload.roomid);
-      this.logger.log(client.id + ' left ' + payload.roomid, 'Socket Left');
-    }
+  async left_room(client: Socket, payload: RoomIO) {
+    return this.rethink
+      .user(payload.userid)
+      .room(payload.roomid)
+      .do_left_room()
+      .then(() => {
+        client.leave(payload.roomid);
+      });
   }
 
   @SubscribeMessage(SEND_MESSAGE)
-  handleMessage(client: Socket, payload: SendMessageDto) {
-    this.messages.push({ ...payload, id: uuid() });
-    this.server.to(payload.roomid).emit(RECEIVE_MESSAGE, payload);
-    this.logger.log(client.id, 'Socket Message');
+  async send_essage(client: Socket, payload: MessageIO) {
+    return this.rethink
+      .user(payload.userid)
+      .room(payload.roomid)
+      .create_message(payload.text);
   }
 
-  handleDisconnect(client: Socket) {
-    this.clients.delete(client.id);
-    this.server.emit(ONLINE_USERS, _.keys(this.clients));
-    this.logger.log(client.id, 'Socket Disconnect');
+  @SubscribeMessage(AUTH)
+  async auth_user(client: Socket, payload: AuthIO) {
+    if (payload.userid) {
+      this.auth[client.id] = payload.userid;
+      const user = await this.rethink.user(payload.userid).get_user();
+      for (const room of user.rooms) {
+        client.join(room);
+      }
+    } else {
+      this.auth[client.id] = payload.userid;
+    }
+    return {
+      message: 'text ack',
+    };
   }
 
-  handleConnection(client: Socket) {
-    this.clients.add(client.id);
-    this.server.emit(ONLINE_USERS, _.keys(this.clients));
-    this.logger.log(client.id, 'Socket Connect');
+  async handleDisconnect(client: Socket) {}
+  async handleConnection(client: Socket) {
+    this.server.emit(ROOMS, await this.rethink.get_rooms());
   }
-  afterInit() {}
+
+  async afterInit() {
+    const rooms_cursor = await this.rethink.watch_rooms();
+    const messages_cursor = await this.rethink.watch_messages();
+    rooms_cursor.each(async () => {
+      this.server.emit(ROOMS, await this.rethink.get_rooms());
+    });
+    messages_cursor.each((err, { old_val, new_val }) => {
+      this.server.to(new_val.roomid).emit(new_val);
+    });
+  }
 }

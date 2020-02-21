@@ -2,12 +2,13 @@ import { BehaviorSubject } from 'rxjs';
 import { SendMessageDto } from '../../../nest/dist/app.gateway.model';
 import {
   JOIN_ROOM,
-  RECEIVE_MESSAGE,
+  BROADCAST_MESSAGE,
   SEND_MESSAGE,
   RECEIVE_MESSAGES
 } from '../../../nest/src/app.gateway.model';
 import { userid } from './auth';
 import { emit, on } from './socket';
+import { ROOMS } from '../../../nest/src/app.gateway.model';
 
 export interface Group {
   id: string;
@@ -33,11 +34,14 @@ export const rooms$ = new BehaviorSubject<Group[]>([
 
 export const messages$ = new BehaviorSubject<Message[]>([]);
 
-on(RECEIVE_MESSAGE, (msg: Message) => {
+on(BROADCAST_MESSAGE, (msg: Message) => {
   messages$.next([...messages$.value, msg]);
 });
 on(RECEIVE_MESSAGES, (msgs: Message[]) => {
   messages$.next(msgs);
+});
+on(ROOMS, groups => {
+  rooms$.next(groups);
 });
 
 export async function changeroom(roomid: string) {
