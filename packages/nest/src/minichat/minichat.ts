@@ -18,15 +18,17 @@ export default class Minichat {
   private userid?: string;
   constructor(conn: Connection) {
     this.conn = conn;
+    if (!conn)
+      throw new Error('Minichat need rethinkdb.connection in constructure');
   }
 
   // * //////////////////////////////////////////////////////////////////////
   // * SETTER
 
-  user(userid) {
+  public user(userid) {
     return assign(clone(this), { userid });
   }
-  room(roomid) {
+  public room(roomid) {
     return assign(clone(this), { roomid });
   }
 
@@ -40,6 +42,7 @@ export default class Minichat {
     return ROOMS.run(this.conn);
   }
   async get_room_messages() {
+    await this.set_room_reading_latest(); // update reading time
     return MESSAGES.filter(msg => msg('roomid').eq(this.roomid)).run(this.conn);
   }
   async get_room_unread_messages() {
@@ -77,6 +80,15 @@ export default class Minichat {
   }
 
   // * //////////////////////////////////////////////////////////////////////
+  // * UPDATER
+
+  async set_room_reading_latest() {
+    return USERS.get(this.userid)
+      .update({ rooms: { [this.roomid]: { latest: r.now() } } })
+      .run(this.conn);
+  }
+
+  // * //////////////////////////////////////////////////////////////////////
   // * WATCHING
 
   async watch_rooms() {
@@ -98,12 +110,7 @@ export default class Minichat {
     if (await this.is_join_room()) throw new Error('already joined');
     return USERS.get(this.userid)
       .update({
-        rooms: {
-          [this.roomid]: {
-            latest: r.epochTime(0),
-            subscribe: true,
-          },
-        },
+        rooms: { [this.roomid]: { latest: r.epochTime(0) } },
       })
       .run(this.conn);
   }

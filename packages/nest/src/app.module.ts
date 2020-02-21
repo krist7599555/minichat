@@ -12,7 +12,9 @@ import { RethinkdbModule } from './rethinkdb/rethinkdb.module';
     ServeStaticModule.forRoot({
       rootPath: path.join(__dirname, '../static'),
     }),
-    RethinkdbModule,
+    RethinkdbModule.forRoot({
+      db: 'yummy',
+    }),
   ],
   controllers: [AppController],
   providers: [AppService, AppGateway],

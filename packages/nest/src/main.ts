@@ -7,8 +7,8 @@ import './rethink';
 const PORT = process.env.PORT || 3000;
 
 async function bootstrap() {
-  // const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  // await app.listen(+PORT);
-  // console.log(`run on http://0.0.0.0:${PORT}`);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  await app.listen(+PORT);
+  console.log(`run on http://0.0.0.0:${PORT}`);
 }
 bootstrap();

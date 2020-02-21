@@ -17,9 +17,10 @@ import {
   MessageIO,
   AUTH,
   AuthIO,
+  READ_MESSAGE,
 } from './app.gateway.model';
 // import * as rethink from './rethinkdb';
-import { RethinkdbService, rooms } from './rethinkdb/rethinkdb.service';
+import { RethinkdbService } from './rethinkdb/rethinkdb.service';
 
 @WebSocketGateway({
   path: '/socket.io',
@@ -54,11 +55,18 @@ export class AppGateway
   }
 
   @SubscribeMessage(SEND_MESSAGE)
-  async send_essage(client: Socket, payload: MessageIO) {
+  async send_message(client: Socket, payload: MessageIO) {
     return this.rethink
       .user(payload.userid)
       .room(payload.roomid)
       .create_message(payload.text);
+  }
+  @SubscribeMessage(READ_MESSAGE)
+  async read_message(client: Socket, payload: RoomIO) {
+    // return this.rethink
+    //   .user(payload.userid)
+    //   .room(payload.roomid)
+    //   .do_join_room
   }
 
   @SubscribeMessage(AUTH)
@@ -83,12 +91,15 @@ export class AppGateway
   }
 
   async afterInit() {
+    await this.rethink.getConnection();
     const rooms_cursor = await this.rethink.watch_rooms();
     const messages_cursor = await this.rethink.watch_messages();
-    rooms_cursor.each(async () => {
+    rooms_cursor.each(async (err, room) => {
+      console.log('rooms change', room);
       this.server.emit(ROOMS, await this.rethink.get_rooms());
     });
     messages_cursor.each((err, { old_val, new_val }) => {
+      console.log('message change', new_val);
       this.server.to(new_val.roomid).emit(new_val);
     });
   }
