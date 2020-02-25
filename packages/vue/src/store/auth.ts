@@ -2,48 +2,40 @@ import Vue from 'vue';
 import VueCompositionApi from '@vue/composition-api';
 Vue.use(VueCompositionApi);
 
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
-// import { map } from 'rxjs/operators';
+import { ref, computed } from '@vue/composition-api';
 
-import { reactive, toRefs, ref, computed } from '@vue/composition-api';
-
-import router from '../router';
 import * as socket from './socket';
-// import * as IO from './socket.model';
-// // import * as _ from 'lodash';
+import * as _ from 'lodash';
+
 const AUTH_TOKEN = 'token';
 
 export const userid = ref<string>(null);
+export const isAuth = computed(() => !!userid.value);
 
-async function authentication(_userid: string | null) {
-  console.log('sock <');
-  await socket.connected();
-  console.log('sock >');
-  console.log('authenticate', userid);
-  socket.emit('user:login', _userid ? { userid: _userid } : null, user => {
-    console.log('TCL: authentication -> user', user);
-    if (user && user.id) {
-      userid.value = user.id;
-      sessionStorage.setItem(AUTH_TOKEN, user.id);
-    } else {
-      userid.value = null;
-      sessionStorage.removeItem(AUTH_TOKEN);
-      router.go(0);
+export async function login(uid: string) {
+  if (/^[0-9a-zA-Z]+$/.test(uid)) {
+    await socket.get('user:login', { userid: uid });
+    userid.value = uid;
+    if (!sessionStorage.getItem(AUTH_TOKEN);) {
+      Toast.open({
+        type: 'is-success',
+        message: `leave group`
+      });
     }
-  });
+    sessionStorage.setItem(AUTH_TOKEN, uid);
+  } else {
+    throw new Error('userid must be number or alphabet only');
+  }
+}
+export async function logout() {
+  await socket.get('user:login', null);
+  userid.value = null;
+  sessionStorage.removeItem(AUTH_TOKEN);
 }
 
-export function login(userid: string) {
-  console.log('login');
-  return authentication(userid);
-}
-export function logout() {
-  console.log('logout');
-  authentication(null);
+export async function auto_auth_socket() {
+  await socket.connected();
+  return login(sessionStorage.getItem(AUTH_TOKEN)).catch(_.noop);
 }
 
-if (sessionStorage.getItem(AUTH_TOKEN)) {
-  authentication(sessionStorage.getItem(AUTH_TOKEN));
-}
-
-// // export toRefs(state);
+auto_auth_socket();

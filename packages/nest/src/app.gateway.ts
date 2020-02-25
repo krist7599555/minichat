@@ -89,6 +89,43 @@ export class AppGateway
       .room(payload.roomid)
       .set_room_reading_latest();
   }
+  @SubscribeMessage('room:invite')
+  async room_invite(client: Socket, payload) {
+    console.log('room invite', payload);
+    const res = await this.rethink
+      .user(this.get_auth(client.id))
+      .room(payload.roomid)
+      .invite_friend_to_room(payload.userid);
+    for (const [you_clientid, you_userid] of this.auth) {
+      console.log('TCL: room_invite -> [you_clientid, you_userid]', [
+        you_clientid,
+        you_userid,
+      ]);
+      if (you_userid == payload.userid) {
+        this.server
+          .to(you_clientid)
+          .emit(
+            'rooms:changes',
+            await this.rethink.user(payload.userid).get_joined_rooms_auth(),
+          );
+      }
+    }
+    return res;
+  }
+
+  @SubscribeMessage('room:leave')
+  async room_leave(client: Socket, payload) {
+    const me = this.rethink.user(this.get_auth(client.id));
+    const res = await me.room(payload.roomid).do_left_room();
+    client.emit('rooms:changes', await me.get_joined_rooms_auth());
+  }
+
+  @SubscribeMessage('rooms:get')
+  async get_rooms(client: Socket, payload) {
+    return await this.rethink
+      .user(this.get_auth(client.id))
+      .get_joined_rooms_auth();
+  }
 
   //* ////////////////////////////////////////////////////
   //* AUTHENTICATION
@@ -105,24 +142,17 @@ export class AppGateway
     if (payload && payload.userid) {
       this.logger.log('user login');
       this.auth.set(client.id, payload.userid);
+
       const me = this.rethink.user(payload.userid);
-      await me.create_user().catch(_.noop);
-      const rooms = await me.get_rooms_auth();
-      for (const room of _.filter(rooms, 'joined')) {
-        console.log('user', payload.userid, 'join', room.title);
-        client.join(room.id);
-      }
-      client.emit('rooms:changes', rooms);
-      (await this.rethink.watch_rooms()).each(async (err, res) => {
-        client.emit('rooms:changes', await me.get_rooms_auth());
+      const { self, joined_rooms } = await me.facade_init_user(async () => {
+        client.emit('rooms:changes', await me.get_joined_rooms_auth());
       });
-      return await me.get_user();
+      joined_rooms.forEach(room => client.join(room.id));
+      return self;
     } else {
       this.logger.log('user logout');
       this.auth.delete(client.id);
-      return {
-        message: 'sign out',
-      };
+      return true;
     }
   }
 
@@ -131,7 +161,8 @@ export class AppGateway
     const me = this.rethink.user(this.get_auth(client.id));
     const room = await me.create_room(payload.title);
     await me.room(room.id).do_join_room();
-    client.emit('rooms:changes', await me.get_rooms_auth());
+    client.join(room.id);
+    client.emit('rooms:changes', await me.get_joined_rooms_auth());
     return room;
   }
 

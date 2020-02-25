@@ -19,11 +19,9 @@
     "core-js": "^3.6.4",
     "lodash": "^4.17.15",
     "register-service-worker": "^1.6.2",
-    "rxjs": "^6.5.4",
     "socket.io-client": "^2.3.0",
     "vue": "^2.6.11",
-    "vue-router": "^3.1.5",
-    "vue-rx": "^6.2.0"
+    "vue-router": "^3.1.5"
   },
   "devDependencies": {
     "@babel/plugin-proposal-optional-chaining": "^7.8.3",

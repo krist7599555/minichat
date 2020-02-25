@@ -18,14 +18,10 @@ import router from './router';
 import './store/auth';
 import './style.scss';
 
-// import ChatGroup from './components/TheChatGroup.vue';
-// import ChatRoom from './components/TheChatRoom.vue';
-import Header from './components/TheHeader.vue';
-
 library.add(fas);
 
 Vue.component('fa', FontAwesomeIcon);
-Vue.component('app-header', Header);
+
 Vue.use(Buefy, {
   defaultIconComponent: 'fa',
   defaultIconPack: 'fas'

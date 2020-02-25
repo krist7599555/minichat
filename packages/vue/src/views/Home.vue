@@ -1,7 +1,6 @@
 <template lang="pug">
 div(style='background-color: #f39fc9; display: flex; height: 100vh;')
   #app-main-grid
-    //- .column.is-paddingless.is-4(style='border-right: 2px solid #eee')
     #app-badge.has-text-white(@click='chat.change_room(null)')
       fa(icon='comments')
       b(style='margin-left: 8px') Minichat
@@ -23,20 +22,24 @@ div(style='background-color: #f39fc9; display: flex; height: 100vh;')
       b-tooltip(label="add" type='is-white') 
         a.after-tooltip(@click='create_room()'): fa.has-text-white(icon='plus')
       b-tooltip(label="offline" type='is-white')
-        a.after-tooltip(@click='create_room()'): fa.has-text-white(icon='eye')
+        a.after-tooltip(disabled): fa.has-text-white(icon='eye')
       b-tooltip(label="setting" type='is-white')
-        a.after-tooltip(@click='create_room()'): fa.has-text-white(icon='cog')
+        a.after-tooltip(disabled): fa.has-text-white(icon='cog')
       b-tooltip(label="close" type='is-white')
         a.after-tooltip(@click='auth.logout()'): fa.has-text-white(icon='door-open')
 
     #app-room-title
-      p {{currentRoom.title}}
-      b-dropdown(:hoverable='false' position='is-bottom-left')
+      p(v-if='currentRoom') #[b {{currentRoom.title}}]
+      p(v-else-if='auth.isAuth.value') #[b {{auth.userid.value}}]
+      p(v-else)
+      b-dropdown(v-show='chat.roomid.value' :hoverable='false' position='is-bottom-left')
         fa(icon='bars' slot="trigger")
-        b-dropdown-item(aria-role="listitem")
-          a.ddown-item #[fa.ddown-icon(icon="edit")] Rename         
-        b-dropdown-item(aria-role="listitem")
-          a.ddown-item #[fa.ddown-icon(icon="door-open")] Leave
+        b-dropdown-item(@click='invite_friend()' aria-role="listitem")
+          a.ddown-item.has-text-primary #[fa.ddown-icon(icon="user-plus")] Invite Friend        
+        //- b-dropdown-item(@click='' aria-role="listitem")
+        //-   a.ddown-item.has-text-primary(disabled) #[fa.ddown-icon(icon="edit")] Rename         
+        b-dropdown-item(@click='chat.room_leave()' aria-role="listitem")
+          a.ddown-item.has-text-primary #[fa.ddown-icon(icon="door-open")] Leave
 
     #app-room-chat
       #chat-messages(v-if='chat.roomid.value')
@@ -50,7 +53,15 @@ div(style='background-color: #f39fc9; display: flex; height: 100vh;')
       #app-info(v-else)
         .content
           b Minichat
-          p krist7599555
+          p.help typing without thinking
+          b-button.is-outlined.is-small(type='is-primary' @click='login()' v-show='!auth.isAuth.value') sign in
+          //- p krist7599555
+          //- .tags
+          //-   .tag vue
+          //-   .tag bulma
+          //-   .tag socket
+          //-   .tag nestjs
+          //-   .tag rethink
     #app-room-input
       input(
         @keyup.enter="chat.send_message($event.target.value);  $event.target.value = '';"
@@ -59,25 +70,14 @@ div(style='background-color: #f39fc9; display: flex; height: 100vh;')
 
 <script>
 import Vue from 'vue';
-import { computed, onMounted, watch } from '@vue/composition-api';
+import { computed, watch } from '@vue/composition-api';
 import * as auth from '../store/auth';
 import * as chat from '../store/chat';
-import { DialogProgrammatic as Dialog } from 'buefy';
-import * as _ from 'lodash';
 
-const loginDialog = cb =>
-  Dialog.prompt({
-    title: `Minichat Login`,
-    inputAttrs: {
-      placeholder: 'ไม่กอบด้วย 0-9a-zA-Z'
-    },
-    confirmText: 'sign in',
-    canCancel: false,
-    trapFocus: true,
-    onConfirm(value) {
-      cb(value);
-    }
-  });
+import * as _ from 'lodash';
+import * as dialog from '../store/ui.dialog';
+import * as socket from '../store/socket';
+import { ToastProgrammatic as Toast } from 'buefy';
 
 watch([chat.messages], () => {
   Vue.nextTick(() => {
@@ -85,8 +85,8 @@ watch([chat.messages], () => {
     if (el) {
       el.scrollIntoView({
         block: 'end',
-        inline: 'nearest',
-        behavior: 'smooth'
+        inline: 'nearest'
+        // behavior: 'smooth'
       });
     }
   });
@@ -95,42 +95,26 @@ watch([chat.messages], () => {
 export default {
   name: 'Home',
   setup() {
-    onMounted(() => {
-      setTimeout(() => {
-        let elm = null;
-        setInterval(() => {
-          if (elm && auth.userid.value) {
-            elm.close();
-            elm = null;
-          } else if (!elm && !auth.userid.value) {
-            elm = loginDialog(userid => {
-              auth.login(userid);
-              elm = null;
-            });
-          }
-        }, 100);
-      }, 1000);
-    });
     return {
       chat,
       auth,
       currentRoom: computed(() => {
-        return _.find(chat.rooms.value, { id: chat.roomid?.value }) || {};
+        return _.find(chat.rooms.value, { id: chat.roomid?.value });
       }),
-      send(e) {
-        console.log(e);
+      async create_room() {
+        chat.create_room(await dialog.create_room());
       },
-      create_room() {
-        Dialog.prompt({
-          title: `Create Chat Room`,
-          inputAttrs: {
-            placeholder: 'นครวัด หมากระจอก',
-            maxlength: 30
-          },
-          trapFocus: true,
-          onConfirm: title => {
-            chat.create_room(title);
-          }
+      async invite_friend() {
+        chat.add_friend_to_room(await dialog.invite_friend());
+      },
+      async login() {
+        await socket.connected();
+        const userid = await dialog.login();
+        await auth.login(userid).catch(err => {
+          Toast.open({
+            type: 'is-danger',
+            message: err.message
+          });
         });
       }
     };
@@ -219,8 +203,14 @@ $font-size: 0.9rem;
     display: flex;
     justify-content: center;
     align-items: center;
+    border: none;
+    background-color: $primary;
     &:hover {
       background-color: darken($primary, 7);
+    }
+    &[disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   }
 }

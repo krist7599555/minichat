@@ -7486,7 +7486,7 @@ run-queue@^1.0.0, run-queue@^1.0.3:
   dependencies:
     aproba "^1.1.1"
 
-rxjs@^6.4.0, rxjs@^6.5.3, rxjs@^6.5.4:
+rxjs@^6.4.0, rxjs@^6.5.3:
   version "6.5.4"
   resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-6.5.4.tgz#e0777fe0d184cec7872df147f303572d414e211c"
   integrity sha512-naMQXcgEo3csAEGvw/NydRA0fuS2nDZJiw1YUWFKU7aPPAPGZEsD4Iimit96qwCieH6y614MCLYwdkrWx7z/7Q==
@@ -8798,11 +8798,6 @@ vue-router@^3.1.5:
   version "3.1.5"
   resolved "https://registry.yarnpkg.com/vue-router/-/vue-router-3.1.5.tgz#ff29b8a1e1306c526b52d4dc0532109f16c41231"
   integrity sha512-BszkPvhl7I9h334GjckCh7sVFyjTPMMJFJ4Bsrem/Ik+B/9gt5tgrk8k4gGLO4ZpdvciVdg7O41gW4DisQWurg==
-
-vue-rx@^6.2.0:
-  version "6.2.0"
-  resolved "https://registry.yarnpkg.com/vue-rx/-/vue-rx-6.2.0.tgz#c3b86462b252626edd16417385bb9054a3a23acb"
-  integrity sha512-tpKUcqS5IUYS+HsdbR5TlE5LL9PK4zwlplEtmMeydnbqaUTa9ciLMplJXAtFSiQw1vuURoyEJmCXqMxaVEIloQ==
 
 vue-style-loader@^4.1.0, vue-style-loader@^4.1.2:
   version "4.1.2"

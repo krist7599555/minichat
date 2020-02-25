@@ -49,7 +49,10 @@ export default class Minichat {
   async get_rooms() {
     return ROOMS.run(this.conn);
   }
-  async get_rooms_auth() {
+
+  async get_rooms_auth(): Promise<
+    (Room & { joined: boolean; unreads?: number; latest_message?: string })[]
+  > {
     const my_rooms = USERS.get(this.userid)('rooms');
     return ROOMS.map(room => {
       const is_joined = my_rooms(room('id')).default(false);
@@ -72,6 +75,11 @@ export default class Minichat {
       );
     }).run(this.conn);
   }
+  async get_joined_rooms_auth() {
+    const rooms = await this.get_rooms_auth();
+    return _.filter(rooms, { joined: true });
+  }
+
   async get_room_messages() {
     await this.set_room_reading_latest(); // update reading time
     return MESSAGES.filter(msg => msg('roomid').eq(this.roomid))
@@ -148,6 +156,8 @@ export default class Minichat {
   // * NETWORK
 
   async is_join_room() {
+    console.log('TCL: Minichat -> is_join_room -> this.roomid', this.roomid);
+    console.log('TCL: Minichat -> is_join_room -> this.userid', this.userid);
     return USERS.get(this.userid)('rooms')
       .hasFields(this.roomid)
       .run(this.conn);
@@ -167,6 +177,17 @@ export default class Minichat {
         .run(this.conn);
     } else {
       throw new Error('can not left unjoined room');
+    }
+  }
+  async invite_friend_to_room(userid: string) {
+    console.log(await this.is_join_room());
+    if (await this.is_join_room()) {
+      const you = this.user(userid).room(this.roomid);
+      await you.get_user();
+      await you.do_join_room();
+      return true;
+    } else {
+      throw new Error('can not invite unjoined room');
     }
   }
 
@@ -201,5 +222,16 @@ export default class Minichat {
   async reset_database() {
     await this.drop_database()
     await this.ensure_schema()
+  }
+
+  async facade_init_user(on_rooms_change: () => void = _.noop) {
+    await this.create_user().catch(_.noop);
+    await this.watch_rooms().then(curser => {
+      on_rooms_change();
+      curser.each(() => on_rooms_change());
+    });
+    const self = await this.get_user();
+    const joined_rooms = await this.get_joined_rooms_auth();
+    return { self, joined_rooms };
   }
 }
