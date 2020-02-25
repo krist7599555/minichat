@@ -14,14 +14,14 @@
 </template>
 
 <script lang="ts">
-import { login } from '../store/auth';
+// import { login } from '../store/auth';
 
 export default {
   name: 'Login',
   data() {
     return {
-      username: '',
-      login
+      username: ''
+      // login
     };
   }
 };

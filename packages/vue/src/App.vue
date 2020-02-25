@@ -7,9 +7,7 @@
 <script lang="ts">
 import Vue from 'vue';
 export default Vue.extend({
-  mounted() {
-    console.log('App.vue mounted');
-  },
+  mounted() {},
   watch: {
     $route: {
       deep: true,

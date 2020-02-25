@@ -36,14 +36,47 @@ export default class Minichat {
   // * GETTER
 
   async get_user() {
-    return USERS.get(this.userid).run(this.conn);
+    const u = await USERS.get(this.userid).run(this.conn);
+    if (u) return u;
+    else {
+      console.error('not found');
+      throw new Error('NOT FOUND');
+    }
+  }
+  async get_users() {
+    return USERS.run(this.conn);
   }
   async get_rooms() {
     return ROOMS.run(this.conn);
   }
+  async get_rooms_auth() {
+    const my_rooms = USERS.get(this.userid)('rooms');
+    return ROOMS.map(room => {
+      const is_joined = my_rooms(room('id')).default(false);
+      return room.merge(
+        is_joined.branch(
+          {
+            joined: true,
+            unreads: MESSAGES.filter(msg =>
+              r.and(
+                msg('roomid').eq(room('id')),
+                msg('time').gt(my_rooms(room('id'))('latest')),
+              ),
+            ).count(),
+            latest_message: MESSAGES.filter(msg => msg('roomid').eq(room('id')))
+              .max(msg => msg('time'))('text')
+              .default(null),
+          },
+          { joined: false },
+        ),
+      );
+    }).run(this.conn);
+  }
   async get_room_messages() {
     await this.set_room_reading_latest(); // update reading time
-    return MESSAGES.filter(msg => msg('roomid').eq(this.roomid)).run(this.conn);
+    return MESSAGES.filter(msg => msg('roomid').eq(this.roomid))
+      .orderBy(r.asc('time'))
+      .run(this.conn);
   }
   async get_room_unread_messages() {
     const me = USERS.get(this.userid);
@@ -52,21 +85,34 @@ export default class Minichat {
         msg('roomid').eq(this.roomid),
         msg('time').gt(me('rooms')(this.roomid)('latest')),
       ),
-    ).run(this.conn);
+    )
+      .orderBy(r.asc('time'))
+      .run(this.conn);
   }
 
   // * //////////////////////////////////////////////////////////////////////
   // * CREATER
 
-  async create_user() {
-    return USERS.insert({ userid: this.userid }, { conflict: 'error' }).run(
-      this.conn,
-    );
+  // prettier-ignore
+  async create_user(): Promise<User> {
+    return await USERS
+      .insert({ id: this.userid, rooms: {} }, { conflict: 'error', returnChanges: true })
+      .run(this.conn)
+      .then(wr => {
+        if (wr.inserted) return wr.changes[0].new_val
+        if (wr.errors) throw new Error(wr.first_error)
+        throw wr;
+      })
   }
-  async create_room(title?: string) {
-    return ROOMS.insert(_.pickBy({ id: this.roomid, title }), {
-      conflict: 'error',
-    }).run(this.conn);
+  // prettier-ignore
+  async create_room(title?: string): Promise<Room> {
+    return await ROOMS.insert(_.pickBy({ id: this.roomid, title: title || r.uuid() }), { conflict: 'error', returnChanges: true })
+      .run(this.conn)
+      .then(wr => {
+        if (wr.inserted) return wr.changes[0].new_val;
+        if (wr.errors) throw new Error(wr.first_error);
+        throw wr;
+      });
   }
   async create_message(text: string) {
     if (await this.is_join_room()) {
@@ -80,7 +126,7 @@ export default class Minichat {
   }
 
   // * //////////////////////////////////////////////////////////////////////
-  // * UPDATER
+  // * READING
 
   async set_room_reading_latest() {
     return USERS.get(this.userid)
@@ -122,5 +168,38 @@ export default class Minichat {
     } else {
       throw new Error('can not left unjoined room');
     }
+  }
+
+  // * //////////////////////////////////////////////////////////////////////
+  // * CONNECTION
+
+  public close_connection() {
+    return this.conn.close();
+  }
+  public get_database_name() {
+    return this.conn['db'];
+  }
+  public set_database_name(db: string) {
+    return this.conn.use(db);
+  }
+
+  // * //////////////////////////////////////////////////////////////////////
+  // * SCHEMAS
+
+  // prettier-ignore
+  async ensure_schema() {
+    await r.dbCreate(this.get_database_name()).run(this.conn).catch(_.noop);
+    for (const t of ['users', 'rooms', 'messages']) {
+      await r.tableCreate(t).run(this.conn).catch(_.noop);
+    }
+  }
+  // prettier-ignore
+  async drop_database() {
+    await r.dbDrop(this.get_database_name()).run(this.conn).catch(_.noop);
+  }
+  // prettier-ignore
+  async reset_database() {
+    await this.drop_database()
+    await this.ensure_schema()
   }
 }

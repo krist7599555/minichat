@@ -59,12 +59,9 @@ export class AppController {
     }
   }
 
-  @Get('messages')
-  findMessages() {
-    // return rethink.getMessages();
-  }
-  @Get('messages/:roomid')
+  @Get('rooms/:roomid/messages')
   findGroupsMessages(@Param('roomid') roomid) {
-    // return rethink.getGroupsMessages(roomid);
+    console.log('TCL: AppController -> findGroupsMessages -> roomid', roomid);
+    return this.rethink.room(roomid).get_room_messages();
   }
 }

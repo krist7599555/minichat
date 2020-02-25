@@ -9,13 +9,13 @@
 </template>
 
 <script lang="ts">
-import { logout } from '../store/auth';
+// import { logout } from '../store/auth';
 
 export default {
   name: 'TheHeader',
   data() {
     return {
-      logout
+      // logout
     };
   }
 };

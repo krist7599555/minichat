@@ -33,16 +33,11 @@ export class RethinkdbModule {
   }
 }
 
+// prettier-ignore
 async function ensure_exists_in_minichat(conn) {
   const db = conn['db'];
-  await r
-    .dbCreate(db)
-    .run(conn)
-    .catch(noop);
+  await r.dbCreate(db).run(conn).catch(noop);
   for (const t of ['users', 'rooms', 'messages']) {
-    await r
-      .tableCreate(t)
-      .run(conn)
-      .catch(noop);
+    await r.tableCreate(t).run(conn).catch(noop);
   }
 }

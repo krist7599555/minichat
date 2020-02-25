@@ -13,7 +13,7 @@
     "@fortawesome/free-regular-svg-icons": "^5.12.1",
     "@fortawesome/free-solid-svg-icons": "^5.12.1",
     "@fortawesome/vue-fontawesome": "^0.1.9",
-    "@vue/composition-api": "^0.3.4",
+    "@vue/composition-api": "^0.4.0",
     "axios": "^0.19.2",
     "buefy": "^0.8.10",
     "core-js": "^3.6.4",
@@ -26,6 +26,7 @@
     "vue-rx": "^6.2.0"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-optional-chaining": "^7.8.3",
     "@types/lodash": "^4.14.149",
     "@types/socket.io-client": "^1.4.32",
     "@typescript-eslint/eslint-plugin": "^2.18.0",
