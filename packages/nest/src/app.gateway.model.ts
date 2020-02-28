@@ -8,15 +8,13 @@ export const ROOMS = 'watch_rooms';
 export const AUTH = 'auth_user';
 
 export interface RoomIO {
-  // userid: string;
   roomid: string;
 }
 export interface MessageIO {
   roomid: string;
-  // userid: string;
   text: string;
   time?: Date;
 }
 export interface AuthIO {
-  userid: string | null;
+  userid: string;
 }

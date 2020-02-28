@@ -5,6 +5,7 @@ Vue.use(VueCompositionApi);
 
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { fas } from '@fortawesome/free-solid-svg-icons';
+import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 // import VueRx from 'vue-rx';
@@ -18,7 +19,7 @@ import router from './router';
 import './store/auth';
 import './style.scss';
 
-library.add(fas);
+library.add(fas, faGithub);
 
 Vue.component('fa', FontAwesomeIcon);
 

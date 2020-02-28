@@ -20,24 +20,24 @@ div(style='background-color: #f39fc9; display: flex; height: 100vh;')
             .tag.is-primary.is-rounded(style='margin-left: auto' v-show='room.unreads') {{room.unreads}}
     #app-chat-tool
       b-tooltip(label="add" type='is-white') 
-        a.after-tooltip(@click='create_room()'): fa.has-text-white(icon='plus')
+        a.after-tooltip(:disabled='!auth.isAuth.value' @click='auth.isAuth.value && dialog.create_room()'): fa.has-text-white(icon='plus')
       b-tooltip(label="offline" type='is-white')
         a.after-tooltip(disabled): fa.has-text-white(icon='eye')
       b-tooltip(label="setting" type='is-white')
         a.after-tooltip(disabled): fa.has-text-white(icon='cog')
       b-tooltip(label="close" type='is-white')
-        a.after-tooltip(@click='auth.logout()'): fa.has-text-white(icon='door-open')
+        a.after-tooltip(:disabled='!auth.isAuth.value' @click='auth.isAuth.value && auth.logout()'): fa.has-text-white(icon='door-open')
 
     #app-room-title
-      p(v-if='currentRoom') #[b {{currentRoom.title}}]
+      p(v-if='chat.currentRoom.value') #[b {{chat.currentRoom.value.title}}]
       p(v-else-if='auth.isAuth.value') #[b {{auth.userid.value}}]
       p(v-else)
       b-dropdown(v-show='chat.roomid.value' :hoverable='false' position='is-bottom-left')
         fa(icon='bars' slot="trigger")
-        b-dropdown-item(@click='invite_friend()' aria-role="listitem")
+        b-dropdown-item(@click='dialog.invite_friend()' aria-role="listitem")
           a.ddown-item.has-text-primary #[fa.ddown-icon(icon="user-plus")] Invite Friend        
-        //- b-dropdown-item(@click='' aria-role="listitem")
-        //-   a.ddown-item.has-text-primary(disabled) #[fa.ddown-icon(icon="edit")] Rename         
+        b-dropdown-item(@click='dialog.rename_room()' aria-role="listitem")
+          a.ddown-item.has-text-primary(disabled) #[fa.ddown-icon(icon="edit")] Rename         
         b-dropdown-item(@click='chat.room_leave()' aria-role="listitem")
           a.ddown-item.has-text-primary #[fa.ddown-icon(icon="door-open")] Leave
 
@@ -54,14 +54,12 @@ div(style='background-color: #f39fc9; display: flex; height: 100vh;')
         .content
           b Minichat
           p.help typing without thinking
-          b-button.is-outlined.is-small(type='is-primary' @click='login()' v-show='!auth.isAuth.value') sign in
-          //- p krist7599555
-          //- .tags
-          //-   .tag vue
-          //-   .tag bulma
-          //-   .tag socket
-          //-   .tag nestjs
-          //-   .tag rethink
+          b-button.is-outlined.is-small(type='is-primary' @click='dialog.login()' v-show='!auth.isAuth.value') sign in
+          br
+          br
+          a.help(href='https://github.com/krist7599555/minichat' target='_blank') 
+            b-icon(pack='fab' icon='github')
+
     #app-room-input
       input(
         @keyup.enter="chat.send_message($event.target.value);  $event.target.value = '';"
@@ -70,14 +68,8 @@ div(style='background-color: #f39fc9; display: flex; height: 100vh;')
 
 <script>
 import Vue from 'vue';
-import { computed, watch } from '@vue/composition-api';
-import * as auth from '../store/auth';
-import * as chat from '../store/chat';
-
-import * as _ from 'lodash';
-import * as dialog from '../store/ui.dialog';
-import * as socket from '../store/socket';
-import { ToastProgrammatic as Toast } from 'buefy';
+import { watch } from '@vue/composition-api';
+import { auth, chat, dialog } from '../store';
 
 watch([chat.messages], () => {
   Vue.nextTick(() => {
@@ -98,25 +90,7 @@ export default {
     return {
       chat,
       auth,
-      currentRoom: computed(() => {
-        return _.find(chat.rooms.value, { id: chat.roomid?.value });
-      }),
-      async create_room() {
-        chat.create_room(await dialog.create_room());
-      },
-      async invite_friend() {
-        chat.add_friend_to_room(await dialog.invite_friend());
-      },
-      async login() {
-        await socket.connected();
-        const userid = await dialog.login();
-        await auth.login(userid).catch(err => {
-          Toast.open({
-            type: 'is-danger',
-            message: err.message
-          });
-        });
-      }
+      dialog
     };
   }
 };

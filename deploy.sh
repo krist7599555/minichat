@@ -1,9 +1,10 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 rm -rf dist 2>/dev/null
-mkdir dist
-cp -R ./packages/vue/dist dist/static
-cp -R ./packages/nest/dist dist/nest
+# mkdir dist
+cp -R ./packages/nest/dist dist
+cp -R ./packages/nest/static/ dist/static
+cp -R ./packages/vue/dist/ dist/static
 cp ./packages/nest/package.json dist
 cp ./packages/nest/yarn.lock dist
 cp ./packages/nest/ecosystem.config.js dist

@@ -3,9 +3,10 @@ import VueCompositionApi from '@vue/composition-api';
 Vue.use(VueCompositionApi);
 import { ToastProgrammatic as Toast } from 'buefy';
 import * as socket from './socket';
-import { watch } from '@vue/composition-api';
+import { watch, computed } from '@vue/composition-api';
 import { reactive, toRefs } from '@vue/composition-api';
 import * as auth from './auth';
+import * as _ from 'lodash';
 
 interface Room {
   id: string;
@@ -29,9 +30,13 @@ const state = reactive({
 });
 
 export const { rooms, roomid, messages } = toRefs(state);
+export const currentRoom = computed(() => {
+  console.log(state);
+  return _.find(rooms.value, { id: roomid.value });
+});
 
 export async function mark_room_as_read() {
-  await socket.get('room:read', { roomid: state.roomid });
+  await socket.get('mark room:read', { roomid: state.roomid });
   state.rooms = state.rooms.filter(room => {
     if (room.id == state.roomid) {
       room.unreads = 0;
@@ -40,19 +45,24 @@ export async function mark_room_as_read() {
   });
 }
 
-export async function change_room(_roomid: string | null) {
-  state.roomid = _roomid;
+export async function change_room(roomid: string | null) {
+  state.roomid = roomid;
+}
+export async function change_room_title(title: string) {
+  if (title) {
+    await socket.get('put room:title', { roomid: state.roomid, title });
+  }
 }
 
 export async function send_message(text: string) {
-  if (text) {
-    await socket.get('message:create', { roomid: state.roomid, text });
+  if (text && state.roomid) {
+    await socket.get('create room:message', { roomid: state.roomid, text });
   }
 }
 
 export async function create_room(title: string) {
   if (title) {
-    const room = await socket.get<Room>('room:create', { title });
+    const room = await socket.get<Room>('create room', { title });
     state.roomid = room.id;
     Toast.open({
       type: 'is-success',
@@ -62,25 +72,25 @@ export async function create_room(title: string) {
 }
 
 export async function add_friend_to_room(userid: string) {
-  await socket.get<Room>('room:invite', { userid, roomid: roomid.value });
+  await socket.get<Room>('do room:invite', { userid, roomid: roomid.value });
   Toast.open({
     type: 'is-success',
     message: `invited ${userid}`
   });
 }
 export async function room_leave() {
-  await socket.get<Room>('room:leave', { roomid: roomid.value });
+  await socket.get<Room>('do room:leave', { roomid: roomid.value });
   Toast.open({
     type: 'is-success',
     message: `leave group`
   });
 }
 
-socket.on('rooms:changes', _rooms => {
+socket.on('on rooms', _rooms => {
   state.rooms = _rooms;
 });
 
-socket.on('message:add', async msg => {
+socket.on('on message', async msg => {
   // left side
   state.rooms = state.rooms.map(room => {
     if (room.id == msg.roomid) {
@@ -104,7 +114,7 @@ watch(
   () => auth.userid.value,
   async uid => {
     if (uid) {
-      state.rooms = await socket.get<Room[]>('rooms:get');
+      state.rooms = await socket.get<Room[]>('get rooms');
     } else {
       state.roomid = null;
       state.rooms = [];
@@ -115,7 +125,7 @@ watch(
   () => roomid.value,
   async rid => {
     if (rid) {
-      state.messages = await socket.get<Message[]>('messages:get', { roomid: rid });
+      state.messages = await socket.get<Message[]>('get room:messages', { roomid: rid });
       await mark_room_as_read();
     } else {
       state.messages = [];

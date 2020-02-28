@@ -26,6 +26,24 @@ import { ON_MESSAGE } from './app.gateway.model';
 import { UseFilters, Logger } from '@nestjs/common';
 import { MinichatWsExceptionFilter } from './app.gateway.exception';
 
+type MinichatSocket =
+  | 'get rooms'
+  | 'get room:messages'
+  | 'put room:title'
+  | 'mark room:read'
+  | 'create room'
+  | 'create room:message'
+  | 'do room:join'
+  | 'do room:leave'
+  | 'do room:invite'
+  | 'do auth:login'
+  | 'do auth:logout'
+  | 'on rooms'
+  | 'on message';
+
+const IO_on_rooms: MinichatSocket = 'on rooms';
+const IO_on_message: MinichatSocket = 'on message';
+
 @WebSocketGateway({
   path: '/socket.io',
 })
@@ -42,153 +60,169 @@ export class AppGateway
   //* ////////////////////////////////////////////////////
   //* ROOMS
 
-  @SubscribeMessage('room:join')
-  async join_room(client: Socket, payload: RoomIO) {
-    return this.rethink
-      .user(this.get_auth(client.id))
-      .room(payload.roomid)
-      .do_join_room()
-      .then(() => {
-        client.join(payload.roomid);
-      });
+  private async tell_user_to_fetch_rooms(client: Socket | string) {
+    const clientid = _.isString(client) ? client : client.id;
+    this.server
+      .to(clientid)
+      .emit(IO_on_rooms, await this.get_joined_rooms(client));
   }
 
-  @SubscribeMessage('room:left')
-  async left_room(client: Socket, payload: RoomIO) {
+  @SubscribeMessage<MinichatSocket>('do room:join')
+  async join_room(client: Socket, payload: RoomIO) {
     return this.rethink
-      .user(this.get_auth(client.id))
+      .user(this.socket2userid(client))
+      .room(payload.roomid)
+      .do_join_room()
+      .then(() => client.join(payload.roomid) && true);
+  }
+
+  @SubscribeMessage<MinichatSocket>('do room:leave')
+  async left_room(client: Socket, payload: RoomIO) {
+    this.logger.log(`leave`, 'Room');
+    return this.rethink
+      .user(this.socket2userid(client))
       .room(payload.roomid)
       .do_left_room()
-      .then(() => {
+      .then(async () => {
         client.leave(payload.roomid);
+        this.tell_user_to_fetch_rooms(client);
+        return true;
       });
   }
 
   //* ////////////////////////////////////////////////////
   //* MESSAGES
 
-  @SubscribeMessage('message:create')
+  @SubscribeMessage<MinichatSocket>('create room:message')
   async send_message(client: Socket, payload: MessageIO) {
+    console.log('TCL: send_message -> payload', payload);
     return this.rethink
-      .user(this.get_auth(client.id))
+      .user(this.socket2userid(client))
       .room(payload.roomid)
       .create_message(payload.text);
   }
 
-  @SubscribeMessage('messages:get')
+  @SubscribeMessage<MinichatSocket>('get room:messages')
   async get_messages(client: Socket, payload: RoomIO) {
+    this.logger.log(`get`, 'Message');
     return this.rethink
-      .user(this.get_auth(client.id))
+      .user(this.socket2userid(client))
       .room(payload.roomid)
       .get_room_messages();
   }
-  @SubscribeMessage('room:read')
-  async mark_as_read(client: Socket, payload: RoomIO) {
+  @SubscribeMessage<MinichatSocket>('put room:title')
+  async put_room_title(client: Socket, payload: RoomIO & { title: string }) {
+    this.logger.log(`title`, 'Room');
     return this.rethink
-      .user(this.get_auth(client.id))
+      .user(this.socket2userid(client))
       .room(payload.roomid)
-      .set_room_reading_latest();
-  }
-  @SubscribeMessage('room:invite')
-  async room_invite(client: Socket, payload) {
-    console.log('room invite', payload);
-    const res = await this.rethink
-      .user(this.get_auth(client.id))
-      .room(payload.roomid)
-      .invite_friend_to_room(payload.userid);
-    for (const [you_clientid, you_userid] of this.auth) {
-      console.log('TCL: room_invite -> [you_clientid, you_userid]', [
-        you_clientid,
-        you_userid,
-      ]);
-      if (you_userid == payload.userid) {
-        this.server
-          .to(you_clientid)
-          .emit(
-            'rooms:changes',
-            await this.rethink.user(payload.userid).get_joined_rooms_auth(),
-          );
-      }
-    }
-    return res;
+      .set_room_title(payload.title);
   }
 
-  @SubscribeMessage('room:leave')
-  async room_leave(client: Socket, payload) {
-    const me = this.rethink.user(this.get_auth(client.id));
-    const res = await me.room(payload.roomid).do_left_room();
-    client.emit('rooms:changes', await me.get_joined_rooms_auth());
+  @SubscribeMessage<MinichatSocket>('mark room:read')
+  async mark_as_read(client: Socket, payload: RoomIO) {
+    this.logger.log(`read`, 'Room');
+    return this.rethink
+      .user(this.socket2userid(client))
+      .room(payload.roomid)
+      .mark_as_read();
   }
 
-  @SubscribeMessage('rooms:get')
-  async get_rooms(client: Socket, payload) {
+  @SubscribeMessage<MinichatSocket>('do room:invite')
+  async room_invite(client: Socket, { roomid, userid }: RoomIO & AuthIO) {
+    this.logger.log(`invite`, 'Room');
+    await this.rethink
+      .user(this.socket2userid(client))
+      .room(roomid)
+      .invite_friend_to_room(userid);
+    this.userid2clientid(userid).forEach(clientid =>
+      this.tell_user_to_fetch_rooms(clientid),
+    );
+    return true;
+  }
+
+  @SubscribeMessage<MinichatSocket>('get rooms')
+  async get_joined_rooms(client: Socket | string) {
+    const clientid = _.isString(client) ? client : client.id;
     return await this.rethink
-      .user(this.get_auth(client.id))
+      .user(this.clientid2userid(clientid))
       .get_joined_rooms_auth();
   }
 
   //* ////////////////////////////////////////////////////
   //* AUTHENTICATION
-  private get_auth(client_id: string) {
-    if (this.auth.has(client_id)) {
-      return this.auth.get(client_id);
+
+  private clientid2userid(clientid: string) {
+    if (this.auth.has(clientid)) {
+      return this.auth.get(clientid);
     } else {
-      throw new Error('NOT AUTH SOCKET');
+      throw new Error('socket not found user');
     }
   }
+  private socket2userid(client: Socket) {
+    return this.clientid2userid(client.id);
+  }
+  private userid2clientid(userid: string): string[] {
+    const res = [];
+    for (const [cid, uid] of this.auth) {
+      if (uid == userid) {
+        res.push(cid);
+      }
+    }
+    return res;
+  }
 
-  @SubscribeMessage('user:login')
-  async set_auth(client: Socket, payload: AuthIO) {
-    if (payload && payload.userid) {
-      this.logger.log('user login');
-      this.auth.set(client.id, payload.userid);
+  @SubscribeMessage<MinichatSocket>('do auth:login')
+  async auth_login(client: Socket, payload: AuthIO) {
+    this.logger.log('user login');
+    this.auth.set(client.id, payload.userid);
+    const { self, rooms } = await this.rethink
+      .user(payload.userid)
+      .facade_init_user(() => this.tell_user_to_fetch_rooms(client));
+    rooms.forEach(room => client.join(room.id));
+    return self;
+  }
 
-      const me = this.rethink.user(payload.userid);
-      const { self, joined_rooms } = await me.facade_init_user(async () => {
-        client.emit('rooms:changes', await me.get_joined_rooms_auth());
+  @SubscribeMessage<MinichatSocket>('do auth:logout')
+  async auth_logout(client: Socket) {
+    this.logger.log('user logout');
+    this.auth.delete(client.id);
+    return true;
+  }
+
+  @SubscribeMessage<MinichatSocket>('create room')
+  async create_room(client: Socket, payload: any) {
+    return await this.rethink
+      .user(this.socket2userid(client))
+      .create_and_join_room(payload.title)
+      .then(async room => {
+        client.join(room.id);
+        await this.tell_user_to_fetch_rooms(client);
+        return room;
       });
-      joined_rooms.forEach(room => client.join(room.id));
-      return self;
-    } else {
-      this.logger.log('user logout');
-      this.auth.delete(client.id);
-      return true;
-    }
-  }
-
-  @SubscribeMessage('room:create')
-  async room_create(client: Socket, payload: any) {
-    const me = this.rethink.user(this.get_auth(client.id));
-    const room = await me.create_room(payload.title);
-    await me.room(room.id).do_join_room();
-    client.join(room.id);
-    client.emit('rooms:changes', await me.get_joined_rooms_auth());
-    return room;
   }
 
   //* ////////////////////////////////////////////////////
   //* HOOK
+
   async handleDisconnect(client: Socket) {
     this.auth.delete(client.id);
+    this.logger.log('disconnect', 'Connection');
   }
-  async handleConnection(client: Socket) {}
+  async handleConnection(client: Socket) {
+    this.logger.log('connect', 'Connection');
+  }
 
   //* ////////////////////////////////////////////////////
   //* WATCH
 
   async afterInit() {
-    (await this.rethink.watch_messages()).each(async (err, { new_val }) => {
-      this.logger.log('message is change ' + new_val);
-      this.server.to(new_val.roomid).emit('message:add', new_val);
+    this.rethink.watch_messages(async (err, obj) => {
+      this.logger.log('message is change', 'Watch');
+      this.server.to(obj.new_val.roomid).emit(IO_on_message, obj.new_val);
     });
-    (await this.rethink.watch_rooms()).each(async (err, { new_val }) => {
-      this.logger.log('rooms is change');
+    this.rethink.watch_rooms(async (err, obj) => {
+      this.logger.log('rooms is change', 'Watch');
     });
   }
-
-  //* ////////////////////////////////////////////////////
-  //* ERROR
-
-  @SubscribeMessage('error')
-  async on_error(client: Socket, payload: AuthIO) {}
 }

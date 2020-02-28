@@ -13,6 +13,11 @@ export interface Room {
   id: string;
   title: string;
 }
+export interface RoomExtend extends Room {
+  joined: boolean;
+  unreads?: number;
+  latest_message?: string;
+}
 export interface Message {
   userid: string;
   roomid: string;

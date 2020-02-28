@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'minichat',
-      script: './nest/main.js',
+      script: './src/main.js',
       watch: true,
       env: {
         NODE_ENV: 'production',

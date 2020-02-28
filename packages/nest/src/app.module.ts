@@ -13,7 +13,7 @@ import { RethinkdbModule } from './rethinkdb/rethinkdb.module';
       rootPath: path.join(__dirname, '../static'),
     }),
     RethinkdbModule.forRoot({
-      db: 'yummy',
+      db: process.env.NODE_ENV == 'production' ? 'minichat' : 'testminichat',
     }),
   ],
   controllers: [AppController],

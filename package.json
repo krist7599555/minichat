@@ -6,6 +6,11 @@
   },
   "scripts": {
     "dev:front": "yarn --cwd ./packages/vue dev",
-    "dev:back": "yarn --cwd ./packages/nest dev"
+    "dev:back": "yarn --cwd ./packages/nest dev",
+    "build:front": "yarn --cwd ./packages/vue build",
+    "build:back": "yarn --cwd ./packages/nest build",
+    "build": "yarn build:front && yarn build:back",
+    "deploy": "./deploy.sh",
+    "production": "yarn build && yarn deploy"
   }
 }
