@@ -42,23 +42,24 @@ div(style='background-color: #f39fc9; display: flex; height: 100vh;')
           a.ddown-item.has-text-primary #[fa.ddown-icon(icon="door-open")] Leave
 
     #app-room-chat
-      #chat-messages(v-if='chat.roomid.value')
-        .chat-message(
-          v-for='message, i in chat.messages.value'
-          :key='message.id' 
-          :class='message.userid == auth.userid.value ? "me" : "you"'
-        )
-          .name(:class='i && message.userid == chat.messages.value[i-1].userid ? "is-hidden" : ""') {{message.userid}}
-          .text {{message.text}}
-      #app-info(v-else)
-        .content
-          b Minichat
-          p.help typing without thinking
-          b-button.is-outlined.is-small(type='is-primary' @click='dialog.login()' v-show='!auth.isAuth.value') sign in
-          br
-          br
-          a.help(href='https://github.com/krist7599555/minichat' target='_blank') 
-            b-icon(pack='fab' icon='github')
+      MainRouterVue
+      //- #chat-messages(v-if='chat.roomid.value')
+      //-   .chat-message(
+      //-     v-for='message, i in chat.messages.value'
+      //-     :key='message.id' 
+      //-     :class='message.userid == auth.userid.value ? "me" : "you"'
+      //-   )
+      //-     .name(:class='i && message.userid == chat.messages.value[i-1].userid ? "is-hidden" : ""') {{message.userid}}
+      //-     .text {{message.text}}
+      //- #app-info(v-else)
+      //-   .content
+      //-     b Minichat
+      //-     p.help typing without thinking
+      //-     b-button.is-outlined.is-small(type='is-primary' @click='dialog.login()' v-show='!auth.isAuth.value') sign in
+      //-     br
+      //-     br
+      //-     a.help(href='https://github.com/krist7599555/minichat' target='_blank') 
+      //-       b-icon(pack='fab' icon='github')
 
     #app-room-input
       input(
@@ -70,6 +71,8 @@ div(style='background-color: #f39fc9; display: flex; height: 100vh;')
 import Vue from 'vue';
 import { watch } from '@vue/composition-api';
 import { auth, chat, dialog } from '../store';
+import MainRouterVue from './Main/MainRouter.vue';
+
 
 watch([chat.messages], () => {
   Vue.nextTick(() => {
@@ -86,6 +89,7 @@ watch([chat.messages], () => {
 
 export default {
   name: 'Home',
+  components: { MainRouterVue },
   setup() {
     return {
       chat,
