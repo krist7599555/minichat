@@ -28,6 +28,8 @@ export function emit<T>(event: MinichatSocket, payload: T, fn: Function = noop) 
 export function get<T>(event: MinichatSocket, payload = null): Promise<T> {
   return new Promise(res => socket.emit(event, payload, res));
 }
+export const disconnect = () => socket.disconnect()
+export const connect = () => socket.connect()
 
 export async function connected() {
   return new Promise(res => {
