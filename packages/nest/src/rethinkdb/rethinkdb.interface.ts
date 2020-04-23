@@ -7,6 +7,9 @@ export interface ChatState {
 
 export interface User {
   id: string;
+  username: string;
+  password: string;
+  display_name: string;
   rooms: Record<string, ChatState>;
 }
 export interface Room {

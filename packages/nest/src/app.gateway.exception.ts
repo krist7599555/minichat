@@ -6,9 +6,7 @@ export class MinichatWsExceptionFilter implements WsExceptionFilter {
     this.handleError(client, exception);
   }
   handleError(client, exception) {
-    const status = 'error';
     return client.emit('exception', {
-      status: 'error',
       message: exception.message,
     });
   }
