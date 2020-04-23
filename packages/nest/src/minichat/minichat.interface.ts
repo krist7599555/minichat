@@ -2,7 +2,7 @@ import { RDatum } from 'rethinkdb-ts';
 
 export interface ChatState {
   latest: Date;
-  subscribe: Boolean;
+  subscribe: boolean;
 }
 
 export interface User {

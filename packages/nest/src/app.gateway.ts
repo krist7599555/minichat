@@ -95,7 +95,7 @@ export class AppGateway
 
   @SubscribeMessage<MinichatSocket>('create room:message')
   async send_message(client: Socket, payload: MessageIO) {
-    console.log('TCL: send_message -> payload', payload);
+    console.log('send_message', client.id, payload);
     return this.rethink
       .user(this.socket2userid(client))
       .room(payload.roomid)

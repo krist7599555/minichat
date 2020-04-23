@@ -8,8 +8,8 @@ const ROOMS = r.table<Room>('rooms');
 const MESSAGES = r.table<Message>('messages');
 
 // utils
-let assign = Object.assign;
-let clone = <T>(orig: T): T =>
+const assign = Object.assign;
+const clone = <T>(orig: T): T =>
   Object.assign(Object.create(Object.getPrototypeOf(orig)), orig);
 
 export default class Minichat {
@@ -168,7 +168,7 @@ export default class Minichat {
   async watch_rooms(cb = null) {
     const cursor = await ROOMS.changes().run(this.conn);
     if (_.isFunction(cb)) {
-      cursor.each(() => cb(...arguments));
+      cursor.each((...rest) => cb(...rest));
     } else {
       return cursor;
     }

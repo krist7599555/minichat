@@ -18,13 +18,15 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "pm2": "pm2 restart ecosystem.config.js"
+    "pm2": "pm2 restart ecosystem.config.js",
+    "db": "rethinkdb",
+    "redis": "redis-server"
   },
   "dependencies": {
     "@nestjs/common": "^6.10.14",
     "@nestjs/core": "^6.10.14",
     "@nestjs/platform-express": "^6.11.7",
-    "@nestjs/platform-socket.io": "^6.11.7",
+    "@nestjs/platform-socket.io": "^7.0.8",
     "@nestjs/serve-static": "^1.0.2",
     "@nestjs/websockets": "^6.11.7",
     "class-validator": "^0.11.0",
@@ -33,6 +35,7 @@
     "rethinkdb-ts": "^2.4.2",
     "rimraf": "^3.0.0",
     "rxjs": "^6.5.4",
+    "socket.io-redis": "^5.2.0",
     "uuid": "^3.4.0"
   },
   "devDependencies": {
@@ -44,6 +47,7 @@
     "@types/lodash": "^4.14.149",
     "@types/node": "^13.1.6",
     "@types/socket.io": "^2.1.4",
+    "@types/socket.io-redis": "^1.0.25",
     "@types/supertest": "^2.0.8",
     "@types/uuid": "^3.4.7",
     "@typescript-eslint/eslint-plugin": "^2.12.0",
