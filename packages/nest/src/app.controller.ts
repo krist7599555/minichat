@@ -8,19 +8,21 @@ import {
 } from '@nestjs/common';
 import { AppService } from './app.service';
 // import * as rethink from './rethinkdb';
-import { RethinkdbService } from './rethinkdb/rethinkdb.service';
+import Minichat from './minichat/minichat';
+
+const rethink = new Minichat();
 
 @Controller('/api')
 export class AppController {
   constructor(
     private readonly appService: AppService,
-    private readonly rethink: RethinkdbService,
   ) {}
 
   @Get()
   getAPI(): string {
     return 'NO API IMPLEMENT';
   }
+
   // @Get('users')
   // findUsers() {
   //   // return rethink.getUsers();
@@ -53,7 +55,7 @@ export class AppController {
   @Post('rooms')
   create_room(@Body() body) {
     if (body.title) {
-      return this.rethink.create_room(body.title);
+      return rethink.create_room(body.title);
     } else {
       throw new BadRequestException('need title to create group');
     }
@@ -62,6 +64,6 @@ export class AppController {
   @Get('rooms/:roomid/messages')
   findGroupsMessages(@Param('roomid') roomid) {
     console.log('TCL: AppController -> findGroupsMessages -> roomid', roomid);
-    return this.rethink.room(roomid).get_room_messages();
+    return rethink.room(roomid).get_room_messages();
   }
 }

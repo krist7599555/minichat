@@ -21,10 +21,10 @@ import {
   READ_MESSAGE,
 } from './app.gateway.model';
 // import * as rethink from './rethinkdb';
-import { RethinkdbService } from './rethinkdb/rethinkdb.service';
 import { ON_MESSAGE } from './app.gateway.model';
 import { UseFilters, Logger } from '@nestjs/common';
 import { MinichatWsExceptionFilter } from './app.gateway.exception';
+import Minichat from './minichat/minichat';
 
 type MinichatSocket =
   | 'get rooms'
@@ -44,6 +44,8 @@ type MinichatSocket =
 const IO_on_rooms: MinichatSocket = 'on rooms';
 const IO_on_message: MinichatSocket = 'on message';
 
+const rethink = new Minichat();
+
 @WebSocketGateway({
   path: '/socket.io',
 })
@@ -51,7 +53,8 @@ const IO_on_message: MinichatSocket = 'on message';
 export class AppGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger('Socket');
-  constructor(private readonly rethink: RethinkdbService) {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  constructor() {}
 
   @WebSocketServer()
   private readonly server: Server;
@@ -69,7 +72,7 @@ export class AppGateway
 
   @SubscribeMessage<MinichatSocket>('do room:join')
   async join_room(client: Socket, payload: RoomIO) {
-    return this.rethink
+    return rethink
       .user(this.socket2userid(client))
       .room(payload.roomid)
       .do_join_room()
@@ -79,7 +82,7 @@ export class AppGateway
   @SubscribeMessage<MinichatSocket>('do room:leave')
   async left_room(client: Socket, payload: RoomIO) {
     this.logger.log(`leave`, 'Room');
-    return this.rethink
+    return rethink
       .user(this.socket2userid(client))
       .room(payload.roomid)
       .do_left_room()
@@ -96,7 +99,7 @@ export class AppGateway
   @SubscribeMessage<MinichatSocket>('create room:message')
   async send_message(client: Socket, payload: MessageIO) {
     console.log('send_message', client.id, payload);
-    return this.rethink
+    return rethink
       .user(this.socket2userid(client))
       .room(payload.roomid)
       .create_message(payload.text);
@@ -105,7 +108,7 @@ export class AppGateway
   @SubscribeMessage<MinichatSocket>('get room:messages')
   async get_messages(client: Socket, payload: RoomIO) {
     this.logger.log(`get`, 'Message');
-    return this.rethink
+    return rethink
       .user(this.socket2userid(client))
       .room(payload.roomid)
       .get_room_messages();
@@ -113,7 +116,7 @@ export class AppGateway
   @SubscribeMessage<MinichatSocket>('put room:title')
   async put_room_title(client: Socket, payload: RoomIO & { title: string }) {
     this.logger.log(`title`, 'Room');
-    return this.rethink
+    return rethink
       .user(this.socket2userid(client))
       .room(payload.roomid)
       .set_room_title(payload.title);
@@ -122,7 +125,7 @@ export class AppGateway
   @SubscribeMessage<MinichatSocket>('mark room:read')
   async mark_as_read(client: Socket, payload: RoomIO) {
     this.logger.log(`read`, 'Room');
-    return this.rethink
+    return rethink
       .user(this.socket2userid(client))
       .room(payload.roomid)
       .mark_as_read();
@@ -131,7 +134,7 @@ export class AppGateway
   @SubscribeMessage<MinichatSocket>('do room:invite')
   async room_invite(client: Socket, { roomid, userid }: RoomIO & AuthIO) {
     this.logger.log(`invite`, 'Room');
-    await this.rethink
+    await rethink
       .user(this.socket2userid(client))
       .room(roomid)
       .invite_friend_to_room(userid);
@@ -144,7 +147,7 @@ export class AppGateway
   @SubscribeMessage<MinichatSocket>('get rooms')
   async get_joined_rooms(client: Socket | string) {
     const clientid = _.isString(client) ? client : client.id;
-    return await this.rethink
+    return await rethink
       .user(this.clientid2userid(clientid))
       .get_joined_rooms_auth();
   }
@@ -176,7 +179,7 @@ export class AppGateway
   async auth_login(client: Socket, payload: AuthIO) {
     this.logger.log('user login');
     this.auth.set(client.id, payload.userid);
-    const { self, rooms } = await this.rethink
+    const { self, rooms } = await rethink
       .user(payload.userid)
       .facade_init_user(() => this.tell_user_to_fetch_rooms(client));
     rooms.forEach(room => client.join(room.id));
@@ -192,7 +195,7 @@ export class AppGateway
 
   @SubscribeMessage<MinichatSocket>('create room')
   async create_room(client: Socket, payload: any) {
-    return await this.rethink
+    return await rethink
       .user(this.socket2userid(client))
       .create_and_join_room(payload.title)
       .then(async room => {
@@ -217,11 +220,11 @@ export class AppGateway
   //* WATCH
 
   async afterInit() {
-    this.rethink.watch_messages(async (err, obj) => {
+    rethink.watch_messages(async (err, obj) => {
       this.logger.log('message is change', 'Watch');
       this.server.to(obj.new_val.roomid).emit(IO_on_message, obj.new_val);
     });
-    this.rethink.watch_rooms(async (err, obj) => {
+    rethink.watch_rooms(async (err, obj) => {
       this.logger.log('rooms is change', 'Watch');
     });
   }

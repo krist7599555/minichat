@@ -13,14 +13,10 @@ const clone = <T>(orig: T): T =>
   Object.assign(Object.create(Object.getPrototypeOf(orig)), orig);
 
 export default class Minichat {
-  private conn: Connection;
   private roomid?: string;
   private userid?: string;
-  constructor(conn: Connection) {
-    this.conn = conn;
-    if (!conn)
-      throw new Error('Minichat need rethinkdb.connection in constructure');
-  }
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  constructor() { }
 
   // * //////////////////////////////////////////////////////////////////////
   // * SETTER
@@ -37,13 +33,13 @@ export default class Minichat {
 
   async get_user() {
     if (!this.userid) throw new Error('userid is not set');
-    const u = await USERS.get(this.userid).run(this.conn);
+    const u = await USERS.get(this.userid).run();
     if (!u) throw new Error(`user ${this.userid} not exist`);
     return u;
   }
   async get_room() {
     if (!this.roomid) throw new Error('roomid is not set');
-    const r = await USERS.get(this.roomid).run(this.conn);
+    const r = await USERS.get(this.roomid).run();
     if (!r) throw new Error(`user ${this.roomid} not exist`);
     return r;
   }
@@ -51,16 +47,16 @@ export default class Minichat {
     return this.get_user();
   }
   async get_users() {
-    return USERS.run(this.conn);
+    return USERS.run();
   }
   async get_rooms() {
-    return ROOMS.run(this.conn);
+    return ROOMS.run();
   }
   async set_room_title(title: string) {
     await this.assert_is_join_room();
     await ROOMS.get(this.roomid)
       .update({ title })
-      .run(this.conn);
+      .run();
   }
 
   async get_rooms_auth(): Promise<RoomExtend[]> {
@@ -84,7 +80,7 @@ export default class Minichat {
           { joined: false },
         ),
       );
-    }).run(this.conn);
+    }).run();
   }
   async get_joined_rooms_auth() {
     return _.filter(await this.get_rooms_auth(), {
@@ -96,7 +92,7 @@ export default class Minichat {
     await this.mark_as_read(); // update reading time
     return MESSAGES.filter(msg => msg('roomid').eq(this.roomid))
       .orderBy(r.asc('time'))
-      .run(this.conn);
+      .run();
   }
   async get_room_unread_messages() {
     const me = USERS.get(this.userid);
@@ -107,7 +103,7 @@ export default class Minichat {
       ),
     )
       .orderBy(r.asc('time'))
-      .run(this.conn);
+      .run();
   }
 
   // * //////////////////////////////////////////////////////////////////////
@@ -118,7 +114,7 @@ export default class Minichat {
       { id: this.userid, rooms: {} },
       { conflict: 'error', returnChanges: true },
     )
-      .run(this.conn)
+      .run()
       .then(wr => {
         if (wr.inserted) return wr.changes[0].new_val;
         if (wr.errors) throw new Error(wr.first_error);
@@ -131,7 +127,7 @@ export default class Minichat {
       _.pickBy({ id: this.roomid, title: title || r.uuid() }),
       { conflict: 'error', returnChanges: true },
     )
-      .run(this.conn)
+      .run()
       .then(wr => {
         if (wr.inserted) return wr.changes[0].new_val;
         if (wr.errors) throw new Error(wr.first_error);
@@ -150,7 +146,7 @@ export default class Minichat {
       roomid: this.roomid,
       time: r.now(),
       text,
-    }).run(this.conn);
+    }).run();
   }
 
   // * //////////////////////////////////////////////////////////////////////
@@ -159,14 +155,14 @@ export default class Minichat {
   async mark_as_read() {
     await USERS.get(this.userid)
       .update({ rooms: { [this.roomid]: { latest: r.now() } } })
-      .run(this.conn);
+      .run();
   }
 
   // * //////////////////////////////////////////////////////////////////////
   // * WATCHING
 
   async watch_rooms(cb = null) {
-    const cursor = await ROOMS.changes().run(this.conn);
+    const cursor = await ROOMS.changes().run();
     if (_.isFunction(cb)) {
       cursor.each((...rest) => cb(...rest));
     } else {
@@ -174,7 +170,7 @@ export default class Minichat {
     }
   }
   async watch_messages(cb = null) {
-    const cursor = await MESSAGES.changes().run(this.conn);
+    const cursor = await MESSAGES.changes().run();
     if (_.isFunction(cb)) {
       cursor.each((...arg) => cb(...arg));
     } else {
@@ -189,7 +185,7 @@ export default class Minichat {
     await this.assert_user_exist();
     return USERS.get(this.userid)('rooms')
       .hasFields(this.roomid)
-      .run(this.conn);
+      .run();
   }
   async assert_is_join_room(msg?: string) {
     if (!(await this.is_join_room())) {
@@ -202,13 +198,13 @@ export default class Minichat {
       .update({
         rooms: { [this.roomid]: { latest: r.epochTime(0) } },
       })
-      .run(this.conn);
+      .run();
   }
   async do_left_room() {
     await this.assert_is_join_room();
     await USERS.get(this.userid)
       .update({ rooms: { [this.roomid]: r.literal() } })
-      .run(this.conn);
+      .run();
   }
   async invite_friend_to_room(userid: string) {
     await this.assert_is_join_room();
@@ -219,43 +215,43 @@ export default class Minichat {
   // * //////////////////////////////////////////////////////////////////////
   // * CONNECTION
 
-  public close_connection() {
-    return this.conn.close();
-  }
-  public get_database_name() {
-    return this.conn['db'];
-  }
-  public set_database_name(db: string) {
-    return this.conn.use(db);
-  }
+  // public close_connection() {
+  //   return this.conn.close();
+  // }
+  // public get_database_name() {
+  //   return this.conn['db'];
+  // }
+  // public set_database_name(db: string) {
+  //   return this.conn.use(db);
+  // }
 
   // * //////////////////////////////////////////////////////////////////////
   // * SCHEMAS
 
-  async ensure_schema() {
-    await r
-      .dbCreate(this.get_database_name())
-      .run(this.conn)
-      .catch(_.noop);
-    for (const t of ['users', 'rooms', 'messages']) {
-      await r
-        .tableCreate(t)
-        .run(this.conn)
-        .catch(_.noop);
-    }
-  }
+  // async ensure_schema() {
+  //   await r
+  //     .dbCreate(this.get_database_name())
+  //     .run()
+  //     .catch(_.noop);
+  //   for (const t of ['users', 'rooms', 'messages']) {
+  //     await r
+  //       .tableCreate(t)
+  //       .run()
+  //       .catch(_.noop);
+  //   }
+  // }
 
-  async drop_database() {
-    await r
-      .dbDrop(this.get_database_name())
-      .run(this.conn)
-      .catch(_.noop);
-  }
+  // async drop_database() {
+  //   await r
+  //     .dbDrop(this.get_database_name())
+  //     .run()
+  //     .catch(_.noop);
+  // }
 
-  async reset_database() {
-    await this.drop_database();
-    await this.ensure_schema();
-  }
+  // async reset_database() {
+  //   await this.drop_database();
+  //   await this.ensure_schema();
+  // }
 
   async facade_init_user(cb = null) {
     await this.create_user()
