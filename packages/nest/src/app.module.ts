@@ -4,14 +4,14 @@ import * as path from 'path';
 import { AppController } from './app.controller';
 import { AppGateway } from './app.gateway';
 import { AppService } from './app.service';
-
+import { AuthService } from './auth.service';
+import { RoomService } from './room.service';
+const imports = process.env.NODE_ENV == "production" 
+  ? [ ServeStaticModule.forRoot({ rootPath: path.join(__dirname, '../static'), }) ] 
+  : []
 @Module({
-  imports: [
-    ServeStaticModule.forRoot({
-      rootPath: path.join(__dirname, '../static'),
-    }),
-  ],
+  imports,
   controllers: [AppController],
-  providers: [AppService, AppGateway],
+  providers: [AppService, AppGateway, AuthService, RoomService],
 })
 export class AppModule {}
