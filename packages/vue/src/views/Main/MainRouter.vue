@@ -10,9 +10,23 @@ import { BehaviorSubject } from 'rxjs'
 import ReadMeVue from './ReadMe.vue';
 // import MessageVue from './Message.vue';
 import { ref, onMounted } from '@vue/composition-api';
+import { user$ } from '../../store/auth';
+import ProfileVue from './Profile.vue';
+import { roomid$ } from '../../store/chat';
+import MessageVue from './Message.vue';
 
-export const nav = new BehaviorSubject(ReadMeVue);
-
+export const nav = new BehaviorSubject<unknown>(ReadMeVue);
+user$.subscribe(u => {
+  if (u) {
+    nav.next(ProfileVue);
+  } else {
+    nav.next(ReadMeVue)
+  }
+})
+roomid$.subscribe((roomid) => {
+  if (roomid)
+    nav.next(MessageVue)
+})
 export default Vue.extend({
   setup() {
     const comp = ref(nav.value);
