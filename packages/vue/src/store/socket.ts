@@ -6,7 +6,8 @@ import { BehaviorSubject } from 'rxjs';
 const socket = io({
   path: '/socket.io',
   reconnection: true,
-  autoConnect: false
+  autoConnect: false,
+  transports: ['websocket']
 });
 
 type MinichatSocket =
