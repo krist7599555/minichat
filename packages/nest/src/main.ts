@@ -8,6 +8,7 @@ import { connection_pool, ensure_table } from './rethinkdb/index';
 import * as cookieParser from 'cookie-parser'
 const PORT = process.env.PORT || 3000;
 import * as morgan from 'morgan'
+import { BaseErrorFilter } from './exception.filter';
 async function bootstrap() {
   await connection_pool;
   await ensure_table();
@@ -15,6 +16,7 @@ async function bootstrap() {
   await app
     .use(morgan('dev'))
     .use(cookieParser())
+    .useGlobalFilters(new BaseErrorFilter())
     .useWebSocketAdapter(new RedisIoAdapter(app))
     .listen(+PORT);
   console.log(`run on http://0.0.0.0:${PORT}`);
