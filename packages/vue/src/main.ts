@@ -30,6 +30,13 @@ Vue.use(Buefy, {
 
 Vue.config.productionTip = false;
 
+import axios from 'axios';
+axios.interceptors.response.use(res => res, err => {
+  console.log(err.response)
+  err.message = err.response.data?.message || err.message
+  throw err;
+})
+
 new Vue({
   router,
   render: h => h(App),
