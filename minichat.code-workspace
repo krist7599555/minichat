@@ -5,6 +5,10 @@
     },
     {
       "path": "packages/vue"
+    },
+    {
+      "name": "SSH FS - nginx",
+      "uri": "ssh://nginx/"
     }
   ],
   "settings": {

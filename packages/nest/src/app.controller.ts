@@ -41,8 +41,8 @@ export class AppController {
   }
   
   @All("/logout") 
-  logout(@Res() res: Response) {
-    return this.auth.logout(res)
+  logout(@Id() id, @Res() res: Response) {
+    return this.auth.logout(id, res)
   }
 
   @Get("/profile")

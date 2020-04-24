@@ -8,7 +8,6 @@ import * as socket from './socket';
 import * as _ from 'lodash';
 import axios from 'axios'
 import { BehaviorSubject, from } from 'rxjs';
-import { connect } from './socket';
 import { pluck, flatMap, filter, mapTo, tap } from 'rxjs/operators';
 
 interface User {
@@ -32,44 +31,30 @@ user$.subscribe(u => {
   } else {
     _.assign(user, _.mapValues(user, _.constant(null)));
   }
-  console.log(user)
 })
 
 
-export async function login({ username, password }): Promise<User> {
-  return axios.post<User>("/api/login", { username, password })
-    .then(res => {
-      socket.connect()
-      res.status
-      Toast.open({
-        type: 'is-success',
-        message: res.status == 201 ? `register success` : 'login success'
-      });
-      return this.profile()
-    })
-}
-
 export function profile() {
-  return from(axios.get("/api/profile")).pipe(
+  return from(axios.get<User>("/api/profile")).pipe(
     pluck('data'),
-    flatMap((data) => {
-      socket.connect()
-      return socket.io_status$.pipe(
-        filter(_.identity),
-        tap(() => console.log('socket is connected')),
-        mapTo(data)
-      )
-    }),
-    tap(() => console.log('socket is connected in order'))
-  ).subscribe(usr => {
-    user$.next(usr)
-  })
+    tap(() => socket.connect()),
+    tap(usr => user$.next(usr))
+  ).toPromise();
   
 }
 
+export async function login({ username, password }): Promise<User> {
+  const res = await axios.post("/api/login", { username, password });
+  Toast.open({
+    type: 'is-success',
+    message: res.status == 201 ? `register success` : 'login success'
+  });
+  return await profile();
+    
+}
+
 export async function logout() {
-  await axios.post("/api/logout")
-  socket.disconnect()
+  await axios.post("/api/logout");
   user$.next(null)
   Toast.open({
     type: 'is-success',

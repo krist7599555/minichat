@@ -53,6 +53,7 @@ const mark_as_read$ = merge(roomid$, message_push_current$.pipe(pluck('roomid'))
 )
 
 export const rooms$ = merge(
+  auth.user$     .pipe(filter(_.negate(_.identity)), mapTo({ type: 'array',   value: [] })), 
   rooms_emitter$       .pipe(map(rms    => ({ type: 'array',   value: rms }))), 
   message_emitter$     .pipe(map(mgs    => ({ type: 'message', value: mgs }))), 
   mark_as_read$        .pipe(map(roomid => ({ type: 'read',    value: roomid }))),

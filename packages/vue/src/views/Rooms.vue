@@ -11,7 +11,7 @@
           <p> {{room.title}} </p>
           <p class='help has-text-grey'> {{room.latest_message}} </p>
         </div>
-        <div class='tag is-primary is-rounded' style='margin-left: auto' v-show='true || room.unreads'> {{room.unreads}}</div>
+        <div class='tag is-primary is-rounded' style='margin-left: auto' v-show='room.unreads'> {{room.unreads}}</div>
     </div>
     <div class='add-room-guide' v-show='!rooms.length && is_auth'>
       

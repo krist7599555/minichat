@@ -33,9 +33,14 @@ export function emit<T>(event: MinichatSocket, payload: T, fn: Function = noop) 
 export function get<T>(event: MinichatSocket, payload = null): Promise<T> {
   return new Promise(res => socket.emit(event, payload, res));
 }
-export const disconnect = () => socket.disconnect()
+// export const disconnect = () => socket.disconnect()
+// export const close = () => socket.close()
 export const connect = () => socket.connect()
-
+// export const set_reconnection = (b: boolean) => socket.io.reconnection(false)
+// export const get_reconnection = () => socket.io.reconnection()
+// export const connected = () => socket.connected
+// export const disconnected = () => socket.disconnected
+export const open = () => socket.open()
 export const io_status$ = new BehaviorSubject(false);
 
 socket.on('connect', () => {
@@ -44,10 +49,19 @@ socket.on('connect', () => {
 });
 socket.on('disconnect', () => {
   io_status$.next(false)
-  socket.open();
+  console.log('vue dis connect');
+  // socket.open();
 });
 socket.on('exception', err => {
   console.error('SOCKET is exception');
+  console.error(err);
+  Toast.open({
+    type: 'is-danger',
+    message: err.message
+  });
+});
+socket.on('error', err => {
+  console.error('SOCKET is error');
   console.error(err);
   Toast.open({
     type: 'is-danger',

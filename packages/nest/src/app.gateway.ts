@@ -87,9 +87,10 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     this.logger.log('disconnected ' + client.id, 'Connection');
   }
   async handleConnection(@ConnectedSocket() client: Socket) {
-    if (client.id === null) {
+    if (client.id === null || client.id == "null") {
       this.logger.log('bad connected ' + client.id, 'Connection');
-      client.disconnect()
+      client.disconnect(true)
+      
     } else {
       this.logger.log('connected ' + client.id, 'Connection');
       const rooms = await users.get(client.id)('rooms').default({}).run()

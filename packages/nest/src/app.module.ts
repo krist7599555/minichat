@@ -6,11 +6,11 @@ import { AppGateway } from './app.gateway';
 import { AppService } from './app.service';
 import { AuthService } from './auth.service';
 import { RoomService } from './room.service';
-const imports = process.env.NODE_ENV == "production" 
-  ? [ ServeStaticModule.forRoot({ rootPath: path.join(__dirname, '../static'), }) ] 
-  : []
+// const imports = process.env.NODE_ENV == "production" 
+//   ? [ ServeStaticModule.forRoot({ rootPath: path.join(__dirname, '../static'), }) ] 
+//   : []
 @Module({
-  imports,
+  imports: [],
   controllers: [AppController],
   providers: [AppService, AppGateway, AuthService, RoomService],
 })

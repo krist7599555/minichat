@@ -1,5 +1,6 @@
 module.exports = {
   devServer: {
+    port: 4210,
     proxy: {
       '^/socket.io': {
         target: 'http://localhost:3000',

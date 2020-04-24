@@ -3,10 +3,11 @@ import { Response } from 'express';
 import { users } from './rethinkdb';
 import { User } from './interface';
 import { r } from 'rethinkdb-ts'
-
+import { AppGateway } from './app.gateway';
 
 @Injectable()
 export class AuthService {
+  constructor(private gateway: AppGateway) {}
   async register({username, password}, res: Response) {
     if (!username) throw new BadRequestException("username is required")
     if (!password) throw new BadRequestException("password is required")
@@ -34,7 +35,12 @@ export class AuthService {
       res.status(200).send({ message: "login success" })
     } 
   }
-  logout(res: Response) {
+  logout(id: string, res: Response) {
+    try {
+      this.gateway.client(id).disconnect()
+    } catch {
+      
+    }
     res.clearCookie('minichat_id')
     res.clearCookie('io')
     res.status(200).send({ message: "logout success" })
