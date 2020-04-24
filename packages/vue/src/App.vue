@@ -6,15 +6,13 @@
 
 <script lang="ts">
 import Vue from 'vue';
+import { profile } from './store/auth';
+import { connect } from "./store/socket"
 export default Vue.extend({
-  mounted() {},
-  watch: {
-    $route: {
-      deep: true,
-      handler() {
-        console.log('router change');
-      }
-    }
+  mounted() {
+    profile()
+      .then(connect)
+      .finally(console.log)
   }
 });
 </script>

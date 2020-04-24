@@ -1,16 +1,37 @@
+/* eslint-disable @typescript-eslint/ban-ts-ignore */
 import { r } from 'rethinkdb-ts';
-import { User, Message, Room, RoomExtend } from './minichat.interface';
+import { User, Message, Room, RoomExtend } from '../interface';
 import { Connection } from 'rethinkdb-ts';
 import * as _ from 'lodash';
+import { users, rooms, messages } from '../rethinkdb/index';
 
-const USERS = r.table<User>('users');
-const ROOMS = r.table<Room>('rooms');
-const MESSAGES = r.table<Message>('messages');
 
-// utils
 const assign = Object.assign;
 const clone = <T>(orig: T): T =>
   Object.assign(Object.create(Object.getPrototypeOf(orig)), orig);
+
+
+export async function get_rooms(userid: string) {
+  // console.log(userid)
+  // console.log(await  users.get("sdcsdc")('rooms').default({}).run())
+  return users.get(userid)('rooms').default({}).coerceTo('array').map(function(o) {
+    const roomid = o(0)
+    const latest = o(1)('latest')
+    const msgs = messages.filter({ roomid: roomid as any })
+    return rooms.get(roomid).merge({
+      // @ts-ignore
+      latest_message: msgs.max('time')('text').default(null),
+      // @ts-ignore
+      time:           msgs.max('time')('time').default(r.now()),
+      unread:         msgs.filter(function(m) {
+        return r.and(
+          m('time').gt(latest),
+          m('roomid').eq(roomid)
+        )
+      }).count(),
+    })
+  }).run()
+}
 
 export default class Minichat {
   private roomid?: string;
@@ -33,13 +54,13 @@ export default class Minichat {
 
   async get_user() {
     if (!this.userid) throw new Error('userid is not set');
-    const u = await USERS.get(this.userid).run();
+    const u = await users.get(this.userid).run();
     if (!u) throw new Error(`user ${this.userid} not exist`);
     return u;
   }
   async get_room() {
     if (!this.roomid) throw new Error('roomid is not set');
-    const r = await USERS.get(this.roomid).run();
+    const r = await users.get(this.roomid).run();
     if (!r) throw new Error(`user ${this.roomid} not exist`);
     return r;
   }
@@ -47,33 +68,33 @@ export default class Minichat {
     return this.get_user();
   }
   async get_users() {
-    return USERS.run();
+    return users.run();
   }
   async get_rooms() {
-    return ROOMS.run();
+    return rooms.run();
   }
   async set_room_title(title: string) {
     await this.assert_is_join_room();
-    await ROOMS.get(this.roomid)
+    await rooms.get(this.roomid)
       .update({ title })
       .run();
   }
 
   async get_rooms_auth(): Promise<RoomExtend[]> {
-    const my_rooms = USERS.get(this.userid)('rooms');
-    return ROOMS.map(room => {
+    const my_rooms = users.get(this.userid)('rooms');
+    return rooms.map(room => {
       const is_joined = my_rooms(room('id')).default(false);
       return room.merge(
         is_joined.branch(
           {
             joined: true,
-            unreads: MESSAGES.filter(msg =>
+            unreads: messages.filter(msg =>
               r.and(
                 msg('roomid').eq(room('id')),
                 msg('time').gt(my_rooms(room('id'))('latest')),
               ),
             ).count(),
-            latest_message: MESSAGES.filter(msg => msg('roomid').eq(room('id')))
+            latest_message: messages.filter(msg => msg('roomid').eq(room('id')))
               .max(msg => msg('time'))('text')
               .default(null),
           },
@@ -83,25 +104,29 @@ export default class Minichat {
     }).run();
   }
   async get_joined_rooms_auth() {
-    return _.filter(await this.get_rooms_auth(), {
-      joined: true,
-    });
+    return get_rooms(this.userid)
   }
 
   async get_room_messages() {
     await this.mark_as_read(); // update reading time
-    return MESSAGES.filter(msg => msg('roomid').eq(this.roomid))
+    return messages
+      .filter(msg => msg('roomid').eq(this.roomid))
+      .map(msg => msg.merge({
+        user: users.get(msg('userid')).pluck('id', 'display_name')
+      }))
       .orderBy(r.asc('time'))
       .run();
   }
   async get_room_unread_messages() {
-    const me = USERS.get(this.userid);
-    return MESSAGES.filter(msg =>
+    const me = users.get(this.userid);
+    return messages.filter(msg =>
       r.and(
         msg('roomid').eq(this.roomid),
         msg('time').gt(me('rooms')(this.roomid)('latest')),
       ),
-    )
+    ).merge(m => ({
+      user: users.get(m('userid')).pluck('display_name')
+    }))
       .orderBy(r.asc('time'))
       .run();
   }
@@ -110,7 +135,7 @@ export default class Minichat {
   // * CREATER
 
   async create_user(): Promise<User> {
-    return await USERS.insert(
+    return await users.insert(
       { id: this.userid, rooms: {} },
       { conflict: 'error', returnChanges: true },
     )
@@ -123,8 +148,8 @@ export default class Minichat {
   }
 
   async create_room(title: string): Promise<Room> {
-    return await ROOMS.insert(
-      _.pickBy({ id: this.roomid, title: title || r.uuid() }),
+    return await rooms.insert(
+      _.pickBy({ id: this.roomid, title: title || r.uuid(), create_time: r.now() }),
       { conflict: 'error', returnChanges: true },
     )
       .run()
@@ -141,7 +166,7 @@ export default class Minichat {
   }
   async create_message(text: string) {
     await this.assert_is_join_room();
-    await MESSAGES.insert({
+    await messages.insert({
       userid: this.userid,
       roomid: this.roomid,
       time: r.now(),
@@ -153,7 +178,7 @@ export default class Minichat {
   // * READING
 
   async mark_as_read() {
-    await USERS.get(this.userid)
+    await users.get(this.userid)
       .update({ rooms: { [this.roomid]: { latest: r.now() } } })
       .run();
   }
@@ -162,7 +187,7 @@ export default class Minichat {
   // * WATCHING
 
   async watch_rooms(cb = null) {
-    const cursor = await ROOMS.changes().run();
+    const cursor = await rooms.changes().run();
     if (_.isFunction(cb)) {
       cursor.each((...rest) => cb(...rest));
     } else {
@@ -170,7 +195,7 @@ export default class Minichat {
     }
   }
   async watch_messages(cb = null) {
-    const cursor = await MESSAGES.changes().run();
+    const cursor = await messages.changes().run();
     if (_.isFunction(cb)) {
       cursor.each((...arg) => cb(...arg));
     } else {
@@ -183,7 +208,8 @@ export default class Minichat {
 
   async is_join_room() {
     await this.assert_user_exist();
-    return USERS.get(this.userid)('rooms')
+    console.log(await users.get(this.userid).run())
+    return users.get(this.userid)('rooms')
       .hasFields(this.roomid)
       .run();
   }
@@ -194,7 +220,7 @@ export default class Minichat {
   }
   async do_join_room() {
     if (await this.is_join_room()) throw new Error('already joined');
-    await USERS.get(this.userid)
+    await users.get(this.userid)
       .update({
         rooms: { [this.roomid]: { latest: r.epochTime(0) } },
       })
@@ -202,8 +228,8 @@ export default class Minichat {
   }
   async do_left_room() {
     await this.assert_is_join_room();
-    await USERS.get(this.userid)
-      .update({ rooms: { [this.roomid]: r.literal() } })
+    await users.get(this.userid)
+      .update({ rooms: { [this.roomid]: r.literal() } } as any)
       .run();
   }
   async invite_friend_to_room(userid: string) {

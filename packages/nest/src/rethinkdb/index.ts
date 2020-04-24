@@ -1,12 +1,12 @@
 import * as _ from 'lodash';
 import { r } from 'rethinkdb-ts';
 const DATABASE_NAME = 'minichat';
-import { User, Room, Message } from './rethinkdb.interface';
+import { User, Room, Message } from '../interface';
 
 export const connection_pool = r.connectPool({ db: DATABASE_NAME });
 export const users           = r.table<User>('users');
 export const rooms           = r.table<Room>('rooms');
-export const reservations    = r.table<Message>('message');
+export const messages        = r.table<Message>('messages');
 
 export async function ensure_table() {
   await connection_pool;
