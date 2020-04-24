@@ -7,8 +7,8 @@ import { ref } from '@vue/composition-api';
 import * as auth from './auth';
 import * as _ from 'lodash';
 import axios from 'axios';
-import { BehaviorSubject, Subject, merge, from } from 'rxjs';
-import { flatMap, scan, filter, pluck, withLatestFrom, map, tap } from 'rxjs/operators';
+import { BehaviorSubject, Subject, merge, from, combineLatest } from 'rxjs';
+import { flatMap, scan, filter, pluck, withLatestFrom, map, tap, mapTo, share } from 'rxjs/operators';
 
 interface Room {
   id: string;
@@ -25,6 +25,9 @@ interface Message {
 }
 
 
+
+
+
 const rooms_emitter$ = new Subject<Room[]>();
 
 const raw_rooms$ = auth.user$.pipe(
@@ -34,46 +37,82 @@ raw_rooms$.subscribe(rooms_emitter$)
 
 export const roomid$ = new BehaviorSubject<string>(null);
 const message_emitter$ = new Subject<Message>();
+
 const message_read_emitter$ = new Subject<string>();
-const message_read$ = message_read_emitter$.pipe(map(roomid => ({ roomid, unreads: 0 })))
-export const rooms$ = merge(rooms_emitter$, message_emitter$, message_read$).pipe(
-  scan<Room[] | Message, Room[]>((acc, inp) => {
-    return _.isArray(inp) ? inp : _.map(acc, room => {
-      return _.assign(room, inp.roomid == room.id ? { time: inp.time, text: inp.text, latest_message: inp.text } : {})
-    })
+
+export async function mark_room_as_read(roomid) {
+  await socket.get('mark room:read', { roomid });
+  message_read_emitter$.next(roomid);
+}
+
+roomid$.subscribe(mark_room_as_read);
+
+export const rooms$ = merge(
+  rooms_emitter$       .pipe(map(rms    => ({ type: 'array',   value: rms }))), 
+  message_emitter$     .pipe(map(mgs    => ({ type: 'message', value: mgs }))), 
+  message_read_emitter$.pipe(map(roomid => ({ type: 'read',    value: roomid }))),
+  roomid$.pipe(filter(_.identity), map(roomid => ({ type: 'read', value: roomid })))
+).pipe(
+  scan((acc, inp) => {
+    console.log(inp)
+    let ans = null;
+    switch (inp.type) {
+      case "array":   ans = inp.value; break;
+      case 'message': ans = _.map(acc, room => {
+        const msg = inp.value as Message;
+        if (room.id == msg.roomid) {
+          room.latest_message = msg.text;
+          room.time = msg.time;
+          room.unreads += 1
+        }
+        return room;
+      }); 
+      break;
+      case "read": ans = _.map(acc, room => {
+        if (room.id == inp.value) {
+          room.unreads = 0;
+        }
+        return room;
+      }); 
+      break;
+    }
+    return ans;
   }, []),
-  map(rooms => _.sortBy(rooms, 'time'))
+  map(rooms => _.reverse(_.sortBy(rooms, 'time'))),
+  share()
+)
+const active_room$ = combineLatest(rooms$, roomid$).pipe(
+  map(([rooms, id]) => _.find(rooms, {id}) || {} as any)
 )
 
 const message_insert$ = message_emitter$.pipe(
   withLatestFrom(roomid$),
   filter(([m, roomid]) => m.roomid == roomid),
-  pluck(0)
+  pluck(0),
+  share()
 )
+
 const messages_block$ = roomid$.pipe(
   filter(_.identity),
   flatMap(roomid => axios.get(`/api/rooms/${roomid}/messages`)),
   pluck('data'),
 )
 
-export const messages$ = merge(message_insert$, messages_block$).pipe(
-  tap(console.log),
-  scan((acc, inc) => _.isArray(inc) ? inc : [...acc, inc], [])
+export const messages$ = merge(message_insert$, messages_block$, auth.user$.pipe(filter(_.isNull), mapTo([]))).pipe(
+  scan((acc, inc) => _.isArray(inc) ? inc : [...acc, inc], []),
+  share()
 )
 
 
 export const rooms    = ref<Room[]>([]);
 export const roomid   = ref<string | null>(null);
 export const messages = ref<Message[]>([]);
+export const active_room = ref<Room>({} as Room);
 
 rooms$.subscribe(v => rooms.value = v);
 roomid$.subscribe(v => roomid.value = v);
 messages$.subscribe(v => messages.value = v);
-
-export async function mark_room_as_read() {
-  await socket.get('mark room:read', { roomid: roomid.value });
-  message_read_emitter$.next(roomid.value)
-}
+active_room$.subscribe(v => active_room.value = v);
 
 export async function change_room(roomid: string | null) {
   roomid$.next(roomid)
