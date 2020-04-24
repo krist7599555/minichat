@@ -7,12 +7,13 @@ import { RedisIoAdapter } from './socket.adapter';
 import { connection_pool, ensure_table } from './rethinkdb/index';
 import * as cookieParser from 'cookie-parser'
 const PORT = process.env.PORT || 3000;
-
+import * as morgan from 'morgan'
 async function bootstrap() {
   await connection_pool;
   await ensure_table();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   await app
+    .use(morgan('dev'))
     .use(cookieParser())
     .useWebSocketAdapter(new RedisIoAdapter(app))
     .listen(+PORT);
