@@ -6,7 +6,11 @@
     :class='message.userid == userid ? "me" : "you"'
   )
     .name(:class='i && message.userid == messages[i-1].userid ? "is-hidden" : ""') {{message.user.display_name}}
-    .text {{message.text}}
+    //- .name {{message.user.display_name}}
+    .line
+    .text 
+      .time(style='font-size: 0.6rem') {{message.time.slice(11, 16)}}
+      span {{message.text}}
 </template>
 
 <script>

@@ -1,5 +1,5 @@
 <template lang="pug">
-div(style='background-color: #f39fc9; display: flex; height: 100vh;')
+div(style='background-color: #f39fc9; display: flex; height: 100vh; overflow: scroll; padding: 0 1rem')
   #app-main-grid
     #app-badge.has-text-white(@click='nav_profile()')
       fa(icon='comments')
@@ -65,6 +65,13 @@ $font-size: 0.9rem;
   background-color: #e6e6e6;
   > * {
     background-color: white;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  #app-main-grid {
+    position: relative;
+    right: 0;
   }
 }
 
