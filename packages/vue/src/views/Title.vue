@@ -1,8 +1,8 @@
 <template lang='pug'>
   .app-title
-    p(v-if='roomid') #[b {{roomid.slice(0, 18)}}]
+    p(v-if='roomid') #[b {{active_room.title}}]
 
-    p(v-else-if='is_auth') #[b {{userid}}]
+    p(v-else-if='is_auth')
     p(v-else)
     b-dropdown(v-show='roomid' :hoverable='false' position='is-bottom-left')
       fa(icon='bars' slot="trigger")
@@ -15,16 +15,21 @@
 </template>
 
 <script>
-import { roomid, room_leave } from '../store/chat'
-import { userid, is_auth } from '../store/auth';
-import { invite_friend, rename_room } from '../store/dialog'
+import { roomid, room_leave, active_room } from '../store/chat';
+import { userid, is_auth, user } from '../store/auth';
+import { rename_room } from '../store/dialog'
+import { nav } from './Main/MainRouter.vue';
+import InviteFriendVue from './Main/InviteFriend.vue';
 
 export default {
   setup() {
     return {
       roomid, room_leave,
       userid, is_auth,
-      invite_friend, rename_room, 
+      user,
+      invite_friend() {
+        nav.next(InviteFriendVue);
+      }, rename_room, active_room
     }
   }
 }

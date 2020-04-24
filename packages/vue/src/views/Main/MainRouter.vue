@@ -1,5 +1,5 @@
 <template>
-  <div style='display:flex; justify-content: center; align-items: center; height: 100%'>
+  <div style='display:flex; justify-content: center; align-items: center; min-height: 100%'>
     <component :is='comp'></component>
   </div>
 </template>

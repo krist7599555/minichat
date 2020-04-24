@@ -1,7 +1,7 @@
 <template lang="pug">
 div(style='background-color: #f39fc9; display: flex; height: 100vh;')
   #app-main-grid
-    #app-badge.has-text-white
+    #app-badge.has-text-white(@click='nav_profile()')
       fa(icon='comments')
       b(style='margin-left: 8px') Minichat
     #app-chat-list
@@ -19,13 +19,14 @@ div(style='background-color: #f39fc9; display: flex; height: 100vh;')
 <script>
 import Vue from 'vue';
 import { auth, chat, dialog } from '../store';
-import MainRouterVue from './Main/MainRouter.vue';
+import MainRouterVue, { nav } from './Main/MainRouter.vue';
 import { messages$, rooms, roomid } from '../store/chat';
 import { is_auth, userid } from '../store/auth';
 import RoomsVue from './Rooms.vue';
 import TooltipVue from './Tooltip.vue';
 import TitleVue from './Title.vue';
 import InputVue from './Input.vue';
+import ProfileVue from './Main/Profile.vue';
 
 
 export default {
@@ -39,7 +40,10 @@ export default {
       userid,
       chat,
       auth,
-      dialog
+      dialog,
+      nav_profile() {
+        nav.next(ProfileVue);
+      }
     };
   }
 };
@@ -103,7 +107,7 @@ $font-size: 0.9rem;
   overflow: scroll;
   padding: 0 $room-padding;
   #app-info {
-    height: 100%;
+    min-height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;

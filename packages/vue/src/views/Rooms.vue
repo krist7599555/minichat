@@ -11,7 +11,13 @@
           <p> {{room.title}} </p>
           <p class='help has-text-grey'> {{room.latest_message}} </p>
         </div>
-        <div class='tag is-primary is-rounded' style='margin-left: auto' v-show='room.unreads'> {{room.unreads}}</div>
+        <div class='tag is-primary is-rounded' style='margin-left: auto' v-show='true || room.unreads'> {{room.unreads}}</div>
+    </div>
+    <div class='add-room-guide' v-show='!rooms.length && is_auth'>
+      
+        <fa icon='clipboard' class='is-size-3'></fa>
+        <span style='margin-top: 5px'>no room</span>
+      
     </div>
   </div>
 </template>
@@ -19,11 +25,12 @@
 <script lang="ts">
 import Vue from 'vue'
 import { roomid, rooms, change_room } from '../store/chat';
+import { is_auth } from '../store/auth';
 
 export default Vue.extend({
   setup() {
     return {
-      rooms, roomid, change_room
+      rooms, roomid, change_room, is_auth
     }
   }  
 })
@@ -52,6 +59,10 @@ $font-size: 0.9rem;
     }
   }
 }
+#chat-rooms {
+  position: relative;
+  height: 100%;
+}
 .chat-room {
   width: 100%;
   border: none;
@@ -71,5 +82,17 @@ $font-size: 0.9rem;
   height: 50px;
   border-radius: 100px;
   margin-right: 1rem;
+}
+
+
+.add-room-guide {
+  // position: absolute;
+  // bottom: 1rem;
+  // left: 1rem;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
 }
 </style>
