@@ -4,6 +4,7 @@ import { User, Message, Room, RoomExtend } from '../interface';
 import { Connection } from 'rethinkdb-ts';
 import * as _ from 'lodash';
 import { users, rooms, messages } from '../rethinkdb/index';
+import { HttpException, BadRequestException } from '@nestjs/common';
 
 
 const assign = Object.assign;
@@ -12,8 +13,6 @@ const clone = <T>(orig: T): T =>
 
 
 export async function get_rooms(userid: string) {
-  // console.log(userid)
-  // console.log(await  users.get("sdcsdc")('rooms').default({}).run())
   return users.get(userid)('rooms').default({}).coerceTo('array').map(function(o) {
     const roomid = o(0)
     const latest = o(1)('latest')
@@ -23,14 +22,14 @@ export async function get_rooms(userid: string) {
       latest_message: msgs.max('time')('text').default(null),
       // @ts-ignore
       time:           msgs.max('time')('time').default(r.now()),
-      unread:         msgs.filter(function(m) {
+      unreads:        msgs.filter(function(m) {
         return r.and(
           m('time').gt(latest),
           m('roomid').eq(roomid)
         )
       }).count(),
     })
-  }).run()
+  }).default([]).run()
 }
 
 export default class Minichat {
@@ -134,23 +133,11 @@ export default class Minichat {
   // * //////////////////////////////////////////////////////////////////////
   // * CREATER
 
-  async create_user(): Promise<User> {
-    return await users.insert(
-      { id: this.userid, rooms: {} },
-      { conflict: 'error', returnChanges: true },
-    )
-      .run()
-      .then(wr => {
-        if (wr.inserted) return wr.changes[0].new_val;
-        if (wr.errors) throw new Error(wr.first_error);
-        throw wr;
-      });
-  }
-
   async create_room(title: string): Promise<Room> {
+    if (!title) throw new BadRequestException("require title to create room");
     return await rooms.insert(
-      _.pickBy({ id: this.roomid, title: title || r.uuid(), create_time: r.now() }),
-      { conflict: 'error', returnChanges: true },
+      { title: title, create_time: r.now() },
+      { returnChanges: true },
     )
       .run()
       .then(wr => {
@@ -278,20 +265,4 @@ export default class Minichat {
   //   await this.drop_database();
   //   await this.ensure_schema();
   // }
-
-  async facade_init_user(cb = null) {
-    await this.create_user()
-      .then(() => this.create_and_join_room('myself'))
-      .catch(_.noop);
-    if (_.isFunction(cb)) {
-      await this.watch_rooms().then(curser => {
-        cb();
-        curser.each(() => cb());
-      });
-    }
-    return {
-      self: await this.get_user(),
-      rooms: await this.get_joined_rooms_auth(),
-    };
-  }
 }

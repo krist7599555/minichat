@@ -5,16 +5,19 @@ import { User } from './interface';
 import { r } from 'rethinkdb-ts'
 import Minichat from './minichat/minichat';
 import { AppGateway } from './app.gateway';
+
 const rethink = new Minichat()
 @Injectable()
 export class RoomService {
   constructor(private gateway: AppGateway) {}
   async create_room(userid: string, title: string) {
     if (title) {
-      const roomid = (await rethink.create_room(title)).id;
+      const room = await rethink.create_room(title);
+      const roomid = room.id
       await rethink.user(userid).room(roomid).do_join_room();
       await this.gateway.join_room(userid, roomid);
       await this.gateway.push_fetch_rooms(userid);
+      return room
     } else {
       throw new BadRequestException('need title to create group');
     }
@@ -27,5 +30,19 @@ export class RoomService {
   }
   async update_room_title(roomid, title) {
     return rooms.get(roomid).update({ title }).run()
+  }
+  async add_room_member(roomid, userid) {
+    await rethink
+      .user(userid)
+      .room(roomid)
+      .do_join_room()
+    this.gateway.room_invite(userid, roomid);
+  }
+  async remove_room_member(roomid, userid) {
+    await rethink
+      .user(userid)
+      .room(roomid)
+      .do_left_room()
+    this.gateway.left_room(userid, roomid);
   }
 }

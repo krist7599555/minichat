@@ -34,6 +34,6 @@ export class AuthService {
     res.status(200).send({ message: "logout success" })
   }
   profile(userid: string) {
-    return users.get(userid).pluck('id', 'username', 'displayname').run()
+    return users.get(userid).pluck('id', 'username', 'display_name').run()
   }
 }

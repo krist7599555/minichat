@@ -7,6 +7,7 @@ import {
   Res,
   All,
   Put,
+  Delete,
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { get_rooms } from './minichat/minichat';
@@ -72,6 +73,14 @@ export class AppController {
   @Put('/rooms/:roomid/title/:title')
   put_room_title(@Param() {roomid, title}) {
     return this.rooms.update_room_title(roomid, title);
+  }
+  @Put('/rooms/:roomid/members/:userid')
+  add_room_member(@Param() { roomid, userid }) {
+    return this.rooms.add_room_member(roomid, userid);
+  }
+  @Delete('/rooms/:roomid/members/:userid')
+  remove_room_member(@Param() { roomid, userid }) {
+    return this.rooms.remove_room_member(roomid, userid);
   }
 
 }

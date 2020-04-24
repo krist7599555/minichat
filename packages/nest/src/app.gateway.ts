@@ -89,11 +89,11 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
   }
 
   async join_room(userid: string, roomid: string) {
-    return this.client(userid).join(roomid);
+    return this.client(userid)?.join(roomid);
   }
 
   async left_room(userid: string, roomid: string) {
-    this.client(userid).leave(roomid);
+    this.client(userid)?.leave(roomid);
     this.push_fetch_rooms(userid);
     for (const uid in this.server.to(roomid).connected) {
       this.push_fetch_rooms(uid);
@@ -134,11 +134,15 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     this.logger.log('disconnected ' + client.id, 'Connection');
   }
   async handleConnection(@ConnectedSocket() client: Socket) {
-    this.logger.log('connected ' + client.id, 'Connection');
-    const rooms = await users.get(client.id)('rooms').default({}).run()
-    console.log(client.id, 'join', rooms)
-    for (const room_id in rooms) {
-      client.join(room_id);
+    if (client.id === null) {
+      client.disconnect()
+    } else {
+      this.logger.log('connected ' + client.id, 'Connection');
+      const rooms = await users.get(client.id)('rooms').default({}).run()
+      console.log(client.id, 'join', rooms)
+      for (const room_id in rooms) {
+        client.join(room_id);
+      }
     }
   }
 
@@ -150,7 +154,7 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     // @ts-ignore
     this.server.engine.generateId = function(req: Request) {
       const cook = cookie.parse(req.headers['cookie'] || '')
-      return cook.minichat_id || cook.io || 'someone'
+      return cook.minichat_id || cook.io || null
     }
     rethink.watch_messages(async (err, obj) => {
       console.log('message change', obj);
