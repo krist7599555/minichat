@@ -2,7 +2,11 @@ import io from 'socket.io-client';
 import { noop } from 'lodash';
 import { ToastProgrammatic as Toast } from 'buefy';
 
-const socket = io({ path: '/socket.io' });
+const socket = io({
+  path: '/socket.io',
+  reconnection: true,
+  autoConnect: false
+});
 
 type MinichatSocket =
   | 'get rooms'
@@ -30,13 +34,6 @@ export function get<T>(event: MinichatSocket, payload = null): Promise<T> {
 }
 export const disconnect = () => socket.disconnect()
 export const connect = () => socket.connect()
-
-export async function connected() {
-  return new Promise(res => {
-    if (socket.connected) res(true);
-    else socket.on('connect', () => res(true));
-  });
-}
 
 socket.on('connect', () => {
   console.log('vue connect');
