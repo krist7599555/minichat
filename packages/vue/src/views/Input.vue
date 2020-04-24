@@ -1,14 +1,25 @@
 
 <template lang='pug'>
-  input(@keyup.enter="chat.send_message($event.target.value); $event.target.value = ''")
+div(style='height: 100%')
+  input(:disabled='!is_typable' @keyup.enter="send_message($event.target.value); $event.target.value = ''")
 </template>
 
 <script>
 import { send_message } from '../store/chat'
+import { nav } from './Main/MainRouter.vue';
+import MessageVue from './Main/Message.vue';
+import { ref } from '@vue/composition-api';
+import { map } from 'rxjs/operators';
+
+const is_typable = ref(false)
+nav.pipe(
+  map(nv => nv == MessageVue)
+).subscribe(t => is_typable.value = t)
 
 export default {
   setup() {
     return { 
+      is_typable,
       send_message
     }
   }

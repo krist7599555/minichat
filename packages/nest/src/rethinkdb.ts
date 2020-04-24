@@ -1,7 +1,7 @@
 import * as _ from 'lodash';
 import { r } from 'rethinkdb-ts';
 const DATABASE_NAME = 'minichat';
-import { User, Room, Message } from '../interface';
+import { User, Room, Message } from './interface';
 
 export const connection_pool = r.connectPool({ db: DATABASE_NAME });
 export const users           = r.table<User>('users');

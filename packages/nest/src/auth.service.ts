@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { Response } from 'express';
-import { users } from './rethinkdb/index';
+import { users } from './rethinkdb';
 import { User } from './interface';
 import { r } from 'rethinkdb-ts'
 
@@ -17,7 +17,13 @@ export class AuthService {
     }
     if (!usr) {
       const wr = await users.insert(
-        { username, password, display_name: username, rooms: {}, create_time: r.now() }, 
+        { 
+          username, 
+          password, 
+          display_name: username, 
+          rooms: {}, 
+          create_time: r.now() 
+        }, 
         { returnChanges: true }
       ).run()
       usr = wr.changes[0].new_val;

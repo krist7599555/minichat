@@ -7,7 +7,9 @@ import { computed, reactive } from '@vue/composition-api';
 import * as socket from './socket';
 import * as _ from 'lodash';
 import axios from 'axios'
-import { BehaviorSubject } from 'rxjs'
+import { BehaviorSubject, from } from 'rxjs';
+import { connect } from './socket';
+import { pluck, flatMap, filter, mapTo, tap } from 'rxjs/operators';
 
 interface User {
   id: string;
@@ -47,13 +49,22 @@ export async function login({ username, password }): Promise<User> {
     })
 }
 
-export async function profile(): Promise<User> {
-  return axios.get("/api/profile")
-  .then(res => res.data)
-  .then(usr => {
+export function profile() {
+  return from(axios.get("/api/profile")).pipe(
+    pluck('data'),
+    flatMap((data) => {
+      socket.connect()
+      return socket.io_status$.pipe(
+        filter(_.identity),
+        tap(() => console.log('socket is connected')),
+        mapTo(data)
+      )
+    }),
+    tap(() => console.log('socket is connected in order'))
+  ).subscribe(usr => {
     user$.next(usr)
-    return usr
   })
+  
 }
 
 export async function logout() {

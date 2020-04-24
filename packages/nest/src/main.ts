@@ -4,7 +4,7 @@ import { AppModule } from './app.module';
 // import './rethinkdb';
 import './rethink';
 import { RedisIoAdapter } from './socket.adapter';
-import { connection_pool, ensure_table } from './rethinkdb/index';
+import { connection_pool, ensure_table } from './rethinkdb';
 import * as cookieParser from 'cookie-parser'
 const PORT = process.env.PORT || 3000;
 import * as morgan from 'morgan'

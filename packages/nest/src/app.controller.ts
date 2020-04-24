@@ -10,8 +10,8 @@ import {
   Delete,
 } from '@nestjs/common';
 import { AppService } from './app.service';
-import { get_rooms } from './minichat/minichat';
-import { users } from './rethinkdb/index';
+import { get_rooms } from './minichat';
+import { users, reset } from './rethinkdb';
 import { Response } from 'express'
 import { AppGateway } from './app.gateway';
 import { Id } from './decorator';
@@ -81,6 +81,13 @@ export class AppController {
   @Delete('/rooms/:roomid/members/:userid')
   remove_room_member(@Param() { roomid, userid }) {
     return this.rooms.remove_room_member(roomid, userid);
+  }
+
+
+  @Get("/reset")
+  async reset(@Res() res: Response) {
+    await reset()
+    res.redirect("/")
   }
 
 }

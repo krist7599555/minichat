@@ -1,20 +1,22 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, HttpException } from '@nestjs/common';
 import { Response } from 'express';
-import { users, rooms } from './rethinkdb/index';
+import { users, rooms } from './rethinkdb';
 import { User } from './interface';
 import { r } from 'rethinkdb-ts'
-import Minichat from './minichat/minichat';
-import { AppGateway } from './app.gateway';
 
-const rethink = new Minichat()
+import { AppGateway } from './app.gateway';
+import { get_room_messages, create_room, do_join_room, do_left_room } from './minichat';
+
+
 @Injectable()
 export class RoomService {
   constructor(private gateway: AppGateway) {}
   async create_room(userid: string, title: string) {
+    console.log('create room')
     if (title) {
-      const room = await rethink.create_room(title);
+      const room = await create_room(title);
       const roomid = room.id
-      await rethink.user(userid).room(roomid).do_join_room();
+      await do_join_room(userid, roomid);
       await this.gateway.join_room(userid, roomid);
       await this.gateway.push_fetch_rooms(userid);
       return room
@@ -23,26 +25,17 @@ export class RoomService {
     }
   }
   async get_room_messages(userid, roomid) {
-    return rethink
-      .user(userid)
-      .room(roomid)
-      .get_room_messages();
+    return get_room_messages(userid, roomid);
   }
   async update_room_title(roomid, title) {
     return rooms.get(roomid).update({ title }).run()
   }
   async add_room_member(roomid, userid) {
-    await rethink
-      .user(userid)
-      .room(roomid)
-      .do_join_room()
+    await do_join_room(userid, roomid)
     this.gateway.room_invite(userid, roomid);
   }
   async remove_room_member(roomid, userid) {
-    await rethink
-      .user(userid)
-      .room(roomid)
-      .do_left_room()
+    await do_left_room(userid, roomid);
     this.gateway.left_room(userid, roomid);
   }
 }

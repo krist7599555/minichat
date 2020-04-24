@@ -13,15 +13,11 @@ div(style='background-color: #f39fc9; display: flex; height: 100vh;')
     #app-room-chat
       MainRouterVue
     #app-room-input
-      input(@keyup.enter="chat.send_message($event.target.value);  $event.target.value = '';")
+      InputVue
 </template>
 
 <script>
-import Vue from 'vue';
-import { auth, chat, dialog } from '../store';
 import MainRouterVue, { nav } from './Main/MainRouter.vue';
-import { messages$, rooms, roomid } from '../store/chat';
-import { is_auth, userid } from '../store/auth';
 import RoomsVue from './Rooms.vue';
 import TooltipVue from './Tooltip.vue';
 import TitleVue from './Title.vue';
@@ -34,13 +30,6 @@ export default {
   components: { MainRouterVue, RoomsVue, TooltipVue, TitleVue, InputVue },
   setup() {
     return {
-      rooms,
-      roomid,
-      is_auth,
-      userid,
-      chat,
-      auth,
-      dialog,
       nav_profile() {
         nav.next(ProfileVue);
       }

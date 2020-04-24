@@ -1,6 +1,7 @@
 import io from 'socket.io-client';
 import { noop } from 'lodash';
 import { ToastProgrammatic as Toast } from 'buefy';
+import { BehaviorSubject } from 'rxjs';
 
 const socket = io({
   path: '/socket.io',
@@ -35,8 +36,15 @@ export function get<T>(event: MinichatSocket, payload = null): Promise<T> {
 export const disconnect = () => socket.disconnect()
 export const connect = () => socket.connect()
 
+export const io_status$ = new BehaviorSubject(false);
+
 socket.on('connect', () => {
+  io_status$.next(true)
   console.log('vue connect');
+});
+socket.on('disconnect', () => {
+  io_status$.next(false)
+  socket.open();
 });
 socket.on('exception', err => {
   console.error('SOCKET is exception');

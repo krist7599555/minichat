@@ -31,9 +31,14 @@ Vue.use(Buefy, {
 Vue.config.productionTip = false;
 
 import axios from 'axios';
+import { ToastProgrammatic as Toast } from 'buefy'
 axios.interceptors.response.use(res => res, err => {
   console.log(err.response)
-  err.message = err.response.data?.message || err.message
+  err.message = err.response.data?.message || err.message;
+  Toast.open({
+    type: "is-danger",
+    message: err.message
+  })
   throw err;
 })
 

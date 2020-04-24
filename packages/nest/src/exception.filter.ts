@@ -10,7 +10,7 @@ import { Response, Request } from 'express';
 @Catch()
 export class BaseErrorFilter implements ExceptionFilter {
   catch(exception: Error, host: ArgumentsHost) {
-    console.error(exception)
+    console.error('{{{{', exception, '}}}}')
     const ctx      = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request  = ctx.getRequest<Request>();
