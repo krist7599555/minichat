@@ -20,7 +20,6 @@ import Vue from 'vue';
 
 messages$.subscribe(() => {
   Vue.nextTick(() => {
-    console.log('move')
     const el = document.getElementById('chat-messages');
     if (el) {
       el.scrollIntoView({

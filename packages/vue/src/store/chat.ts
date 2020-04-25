@@ -47,9 +47,9 @@ const message_push_current$ = message_emitter$.pipe(
 
 const mark_as_read$ = merge(roomid$, message_push_current$.pipe(pluck('roomid'))).pipe(
   filter(_.identity),
-  tap((r) => console.log('mark_as_read_1')),
+  // tap((r) => console.log('mark_as_read_1')),
   flatMap(roomid => defer(() => from(socket.get('mark room:read', { roomid })).pipe(mapTo(roomid)))),
-  tap((r) => console.log('mark_as_read_2')),
+  // tap((r) => console.log('mark_as_read_2')),
 )
 
 export const rooms$ = merge(

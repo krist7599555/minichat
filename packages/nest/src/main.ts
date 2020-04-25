@@ -19,6 +19,6 @@ async function bootstrap() {
     .useGlobalFilters(new BaseErrorFilter())
     .useWebSocketAdapter(new RedisIoAdapter(app))
     .listen(+PORT);
-  console.log(`run on http://0.0.0.0:${PORT}`);
+  console.log(`run v.0.3 on http://0.0.0.0:${PORT}`);
 }
 bootstrap();
