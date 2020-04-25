@@ -106,12 +106,12 @@ export async function create_room(title: string): Promise<Room> {
 export async function create_message(userid: string, roomid: string, text: string) {
   if (! await is_join_room(userid, roomid)) throw new Error("can not create messsage in this room")
   console.log('[message] create', text)
-  await messages.insert({
+  return await messages.insert({
     userid: userid,
     roomid: roomid,
     time: r.now(),
     text,
-  }).run();
+  }, {returnChanges: true}).run();
 }
 
 

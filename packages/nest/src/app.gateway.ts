@@ -75,7 +75,13 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
 
   @SubscribeMessage<MinichatSocket>('create room:message')
   async _create_message(client: Socket, payload: MessageIO) {
-    await create_message(client.id, payload.roomid, payload.text);
+    const wr = await create_message(client.id, payload.roomid, payload.text);
+    // local broad cast
+    const msg = wr.changes[0].new_val;
+    // @ts-ignore
+    msg.user = await users.get(msg.userid).pluck('id', 'display_name').run();
+    this.logger.log('message is broadcast', 'Watch');
+    this.server.to(msg.roomid).emit(IO_on_message, msg);
   }
 
   @SubscribeMessage<MinichatSocket>('mark room:read')
@@ -110,15 +116,15 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
       return cook.minichat_id || cook.io || null
     }
 
-    watch_messages(async (err, obj) => {
-      this.logger.log('message is change', 'Watch');
-      const msg = obj.new_val
-      msg.user = await users.get(msg.userid).pluck('id', 'display_name').run()
-      if (msg) {
-        this.logger.log('message is broadcast', 'Watch');
-        this.server.to(msg.roomid).emit(IO_on_message, msg);
-      }
-    });
+    // watch_messages(async (err, obj) => {
+    //   this.logger.log('message is change', 'Watch');
+    //   const msg = obj.new_val
+    //   msg.user = await users.get(msg.userid).pluck('id', 'display_name').run()
+    //   if (msg) {
+    //     this.logger.log('message is broadcast', 'Watch');
+    //     this.server.to(msg.roomid).emit(IO_on_message, msg);
+    //   }
+    // });
     watch_rooms(async (err, obj) => {
       this.logger.log('rooms is change', 'Watch');
       for (const uid in this.server.to((obj.new_val || obj.old_val).id).connected) {
