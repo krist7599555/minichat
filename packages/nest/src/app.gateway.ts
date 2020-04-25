@@ -34,6 +34,7 @@ const IO_on_message: MinichatSocket = 'on message';
 
 @WebSocketGateway({
   path: '/socket.io',
+  transports: ['websocket']
 })
 @UseFilters(new MinichatWsExceptionFilter())
 export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
@@ -114,19 +115,19 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
       const msg = obj.new_val
       msg.user = await users.get(msg.userid).pluck('id', 'display_name').run()
       if (msg) {
+        this.logger.log('message is broadcast', 'Watch');
         this.server.to(msg.roomid).emit(IO_on_message, msg);
       }
     });
     watch_rooms(async (err, obj) => {
       this.logger.log('rooms is change', 'Watch');
       for (const uid in this.server.to((obj.new_val || obj.old_val).id).connected) {
-        this.logger.log('push fetch to ' + uid, 'Emit');
+        this.logger.log('room is broadcast', 'Watch');
         this.push_fetch_rooms(uid);
       }
     });
     watch_users(async (err, obj) => {
       this.logger.log('users is change', 'Watch');
-      console.log(obj)
     });
   }
   
